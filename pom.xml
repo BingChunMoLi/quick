@@ -10,10 +10,11 @@
     <packaging>pom</packaging>
 
     <name>quick</name>
+    <url>https://github.com/bingchunmoli/quick</url>
     <description>
         快速开始基础组件
+        SpringBootQuickStarter
     </description>
-
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
