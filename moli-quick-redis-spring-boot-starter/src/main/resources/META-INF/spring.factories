@@ -1,0 +1,3 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+com.bingchunmoli.autoconfigure.redis.config.RedisSerializerAutoConfiguration,\
+com.bingchunmoli.autoconfigure.redis.config.RedisUtilAutoConfiguration
