@@ -47,11 +47,14 @@ public class ResultVO<T> {
     }
 
     public static <T> ResultVO<T> ok(T data) {
-        new ResultVO<Object>();
         return new ResultVO<>(data);
     }
 
     public static <T> ResultVO<T> failBySystem(T data) {
         return new ResultVO<>(CodeEnum.FAILURE, data);
+    }
+
+    public static <T> ResultVO<T> failBySystem(CodeEnum codeEnum, T data) {
+        return new ResultVO<>(codeEnum, data);
     }
 }

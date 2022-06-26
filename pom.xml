@@ -6,7 +6,7 @@
 
     <groupId>com.bingchunmoli</groupId>
     <artifactId>moli-quick-spring-boot-starter</artifactId>
-    <version>1.0.0-bate</version>
+    <version>1.0.1-bate</version>
     <packaging>pom</packaging>
 
     <name>quick</name>
@@ -27,6 +27,12 @@
         <module>moli-common-beans</module>
     </modules>
 
+    <developers>
+        <developer>
+            <name>bingchunmoli</name>
+            <url>https://github.com/bingchunmoli</url>
+        </developer>
+    </developers>
 
     <licenses>
         <license>
@@ -38,7 +44,8 @@
 
     <scm>
         <url>https://github.com/bingchunmoli/quick</url>
-        <connection>https://github.com/bingchunmoli/quick</connection>
+        <connection>scm:git:https://github.com/bingchunmoli/quick.git</connection>
+        <developerConnection>scm:git:https://github.com/bingchunmoli/quick.git</developerConnection>
     </scm>
 
     <distributionManagement>
@@ -137,10 +144,10 @@
                         <goals>
                             <goal>sign</goal>
                         </goals>
-<!--                        <configuration>-->
-<!--                            <keyname>${gpg.keyname}</keyname>-->
-<!--                            <passphrase>${gpg.keyname}</passphrase>-->
-<!--                        </configuration>-->
+                        <configuration>
+                            <keyname>${gpg.keyname}</keyname>
+                            <passphrase>${gpg.keyname}</passphrase>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

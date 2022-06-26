@@ -1,6 +1,8 @@
 package com.bingchunmoli.quick.redis;
 
 import com.bingchunmoli.autoconfigure.redis.util.RedisUtil;
+import com.bingchunmoli.bean.ResultVO;
+import org.apache.tomcat.jni.User;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,6 +31,10 @@ public class RedisApplicationTest {
         Object a = redisUtil.getObject("a");
         System.out.println(a);
         Thread.sleep(10000);
+
+        redisUtil.setObject("test:object", ResultVO.ok("new Data"));
+        ResultVO object = redisUtil.getObject("test:object");
+        System.out.println(object);
     }
 
 

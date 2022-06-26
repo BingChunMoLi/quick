@@ -5,7 +5,7 @@
     <parent>
         <artifactId>moli-quick-spring-boot-starter</artifactId>
         <groupId>com.bingchunmoli</groupId>
-        <version>1.0.0-bate</version>
+        <version>1.0.1-bate</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
