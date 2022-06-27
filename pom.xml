@@ -6,7 +6,7 @@
 
     <groupId>com.bingchunmoli</groupId>
     <artifactId>moli-quick-spring-boot-starter</artifactId>
-    <version>1.0.1-bate</version>
+    <version>1.0.2-bate</version>
     <packaging>pom</packaging>
 
     <name>quick</name>

@@ -3,6 +3,7 @@ package com.bingchunmoli.bean;
 
 import com.bingchunmoli.bean.enums.CodeEnum;
 import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,18 +21,21 @@ public class ResultVO<T> {
     /**
      * 业务状态码
      */
+    @Schema(name = "业务状态码")
     @ApiModelProperty("业务状态码")
     private String code;
 
     /**
      * 业务友好消息
      */
+    @Schema(name = "业务友好消息")
     @ApiModelProperty("业务友好消息")
     private String msg;
 
     /**
      * 业务承载数据
      */
+    @Schema(name = "业务承载数据")
     @ApiModelProperty("业务承载数据")
     private T data;
 
