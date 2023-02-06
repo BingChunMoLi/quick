@@ -1,0 +1,2 @@
+com.bingchunmoli.autoconfigure.redis.config.RedisUtilAutoConfiguration
+com.bingchunmoli.autoconfigure.redis.config.RedisSerializerAutoConfiguration
