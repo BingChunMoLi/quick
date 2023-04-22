@@ -5,7 +5,7 @@
     <parent>
         <artifactId>moli-quick-spring-boot-starter</artifactId>
         <groupId>com.bingchunmoli</groupId>
-        <version>1.0.4-bate</version>
+        <version>1.0.5-bate</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -30,6 +30,31 @@
             <artifactId>swagger-annotations</artifactId>
             <version>2.2.0</version>
             <optional>true</optional>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-core</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-logging</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-aop</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjrt</artifactId>
             <scope>compile</scope>
         </dependency>
     </dependencies>

@@ -5,7 +5,7 @@
     <parent>
         <artifactId>moli-quick-spring-boot-starter</artifactId>
         <groupId>com.bingchunmoli</groupId>
-        <version>1.0.4-bate</version>
+        <version>1.0.5-bate</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -13,15 +13,15 @@
 
     <dependencies>
         <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
             <scope>compile</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-boot-starter</artifactId>
-            <version>3.5.1</version>
+            <version>3.5.3.1</version>
             <optional>true</optional>
             <scope>compile</scope>
         </dependency>
