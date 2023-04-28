@@ -39,7 +39,7 @@ public class ResultVO<T> {
     @ApiModelProperty("业务承载数据")
     private T data;
 
-    public ResultVO(CodeEnum code, T data) {
+    public ResultVO(Code code, T data) {
         this.code = code.getCode();
         this.msg = code.getMsg();
         this.data = data;
@@ -58,7 +58,7 @@ public class ResultVO<T> {
         return new ResultVO<>(CodeEnum.FAILURE, data);
     }
 
-    public static <T> ResultVO<T> failBySystem(CodeEnum codeEnum, T data) {
-        return new ResultVO<>(codeEnum, data);
+    public static <T> ResultVO<T> failBySystem(Code code, T data) {
+        return new ResultVO<>(code, data);
     }
 }

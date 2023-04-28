@@ -1,5 +1,6 @@
 package com.bingchunmoli.bean.enums;
 
+import com.bingchunmoli.bean.Code;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -10,7 +11,7 @@ import lombok.Getter;
  */
 @Getter
 @AllArgsConstructor
-public enum CodeEnum {
+public enum CodeEnum implements Code {
     /**
      * 成功
      */
