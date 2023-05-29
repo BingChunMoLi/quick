@@ -1,10 +1,13 @@
 package com.bingchunmoli.quick.redis;
 
+import com.bingchunmoli.annotation.ExecutionTime;
+import com.bingchunmoli.annotation.Log;
 import com.bingchunmoli.autoconfigure.redis.util.RedisUtil;
 import com.bingchunmoli.bean.ResultVO;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.data.redis.core.RedisTemplate;
 
 import java.util.ArrayList;
@@ -36,5 +39,25 @@ public class RedisApplicationTest {
     }
 
 
+    @Autowired
+    private ApplicationContext applicationContext;
+
+    @Test
+    @Log
+    @ExecutionTime
+    void testLog(){
+        log();
+    }
+
+    @Log
+    @ExecutionTime
+    void log(){
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("测试");
+    }
 }
 

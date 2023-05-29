@@ -6,7 +6,7 @@
 
     <groupId>com.bingchunmoli</groupId>
     <artifactId>moli-quick-spring-boot-starter</artifactId>
-    <version>1.0.7-bate</version>
+    <version>1.0.8-bate</version>
     <packaging>pom</packaging>
 
     <name>quick</name>
@@ -16,8 +16,8 @@
         SpringBootQuickStarter
     </description>
     <properties>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
     </properties>
 
     <modules>
@@ -25,6 +25,7 @@
         <module>moli-quick-mybatis-plus-spring-boot-starter</module>
         <module>moli-quick-spring-boot-starter-common-test</module>
         <module>moli-common-beans</module>
+        <module>moli-quick-aop-boot-starter</module>
     </modules>
 
     <developers>
@@ -104,7 +105,7 @@
                 <configuration>
                     <serverId>ossrh</serverId>
                     <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
-                    <autoReleaseAfterClose>false</autoReleaseAfterClose>
+                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
                 </configuration>
             </plugin>
             <plugin>
