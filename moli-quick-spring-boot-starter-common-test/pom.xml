@@ -36,8 +36,9 @@
         <dependency>
             <groupId>com.bingchunmoli</groupId>
             <artifactId>moli-quick-aop-boot-starter</artifactId>
-            <version>1.0.8-bate</version>
+            <version>${project.version}</version>
             <scope>compile</scope>
         </dependency>
+
     </dependencies>
 </project>
