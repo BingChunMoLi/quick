@@ -15,7 +15,7 @@ public enum ProfileEnum {
     /**
      * 环境美剧
      */
-    DEV("dev"), PROD("prod"), TEST("test");
+    DEV("dev"), PROD("prod"), TEST("test"), PRE("pre");
 
     private final String profile;
 }

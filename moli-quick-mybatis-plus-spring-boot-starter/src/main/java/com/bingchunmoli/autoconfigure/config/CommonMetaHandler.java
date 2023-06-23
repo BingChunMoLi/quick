@@ -11,9 +11,6 @@ import java.time.LocalDateTime;
  *
  * @author BingChunMoLi
  */
-//@Component
-//@ConditionalOnClass(MetaObjectHandler.class)
-//@ConditionalOnMissingBean(name = "metaObjectHandler")
 public class CommonMetaHandler implements MetaObjectHandler {
 
     @Override
