@@ -1,4 +1,4 @@
-package com.bingchunmoli.quick.redis;
+package com.bingchunmoli.redis;
 
 import com.bingchunmoli.annotation.ExecutionTime;
 import com.bingchunmoli.annotation.Log;
@@ -34,7 +34,7 @@ public class RedisApplicationTest {
         System.out.println(a);
         Thread.sleep(10000);
         redisUtil.setObject("test:object", ResultVO.ok("new Data"));
-        ResultVO object = redisUtil.getObject("test:object");
+        ResultVO<String> object = redisUtil.getObject("test:object");
         System.out.println(object);
     }
 

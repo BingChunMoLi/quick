@@ -1,4 +1,4 @@
-package com.bingchunmoli.quick;
+package com.bingchunmoli.test;
 
 import com.bingchunmoli.annotation.EnableAop;
 import org.springframework.boot.SpringApplication;

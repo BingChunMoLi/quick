@@ -1,0 +1,47 @@
+{
+  "groups": [
+    {
+      "name": "moli.interceptor",
+      "type": "com.bingchunmoli.properties.InterceptorsAutoConfigurationProperties",
+      "sourceType": "com.bingchunmoli.properties.InterceptorsAutoConfigurationProperties"
+    },
+    {
+      "name": "moli.interceptor.sign",
+      "type": "com.bingchunmoli.properties.InterceptorsAutoConfigurationProperties$SignProperties",
+      "sourceType": "com.bingchunmoli.properties.InterceptorsAutoConfigurationProperties",
+      "sourceMethod": "getSign()"
+    }
+  ],
+  "properties": [
+    {
+      "name": "moli.interceptor.sign.algorithm",
+      "type": "java.lang.String",
+      "description": "签名算法",
+      "sourceType": "com.bingchunmoli.properties.InterceptorsAutoConfigurationProperties$SignProperties"
+    },
+    {
+      "name": "moli.interceptor.sign.enable",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.bingchunmoli.properties.InterceptorsAutoConfigurationProperties$SignProperties"
+    },
+    {
+      "name": "moli.interceptor.sign.ignore-parameters-list",
+      "type": "java.util.List<java.lang.String>",
+      "description": "忽略请求参数,默认为file",
+      "sourceType": "com.bingchunmoli.properties.InterceptorsAutoConfigurationProperties$SignProperties"
+    },
+    {
+      "name": "moli.interceptor.sign.ignore-path-list",
+      "type": "java.util.List<java.lang.String>",
+      "description": "忽略请求路径",
+      "sourceType": "com.bingchunmoli.properties.InterceptorsAutoConfigurationProperties$SignProperties"
+    },
+    {
+      "name": "moli.interceptor.sign.in-header",
+      "type": "java.lang.Boolean",
+      "description": "是否包含请求头",
+      "sourceType": "com.bingchunmoli.properties.InterceptorsAutoConfigurationProperties$SignProperties"
+    }
+  ],
+  "hints": []
+}
