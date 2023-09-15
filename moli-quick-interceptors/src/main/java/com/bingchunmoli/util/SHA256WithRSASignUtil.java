@@ -11,12 +11,14 @@ import org.springframework.http.MediaType;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
-public class SHA1WithRSASignUtil extends AbstractSignUtil{
+public class SHA256WithRSASignUtil extends AbstractSignUtil{
 
     private final ObjectMapper om;
     private final InterceptorsAutoConfigurationProperties.SignProperties sign;
@@ -37,27 +39,31 @@ public class SHA1WithRSASignUtil extends AbstractSignUtil{
         Map<String, Object> signMap = new HashMap<>(parameterMap);
         String contentType = request.getContentType();
         if (!request.getMethod().equalsIgnoreCase("GET")) {
-            MediaType contentMediaType = MediaType.parseMediaType(contentType);
-            if (contentMediaType.includes(MediaType.APPLICATION_JSON)) {
-                String bodyStr = request.getReader().lines().collect(Collectors.joining());
-                JsonNode jsonNode = om.readTree(bodyStr);
-                HashMap<String, Object> jsonBodyMap = new HashMap<>();
-                jsonLeaf(jsonNode, jsonBodyMap);
-                signMap.putAll(jsonBodyMap);
+            if (contentType != null && !contentType.isBlank()) {
+                MediaType contentMediaType = MediaType.parseMediaType(contentType);
+                if (contentMediaType.includes(MediaType.APPLICATION_JSON)) {
+                    String bodyStr = request.getReader().lines().collect(Collectors.joining());
+                    JsonNode jsonNode = om.readTree(bodyStr);
+                    HashMap<String, Object> jsonBodyMap = new HashMap<>();
+                    jsonLeaf(jsonNode, jsonBodyMap);
+                    signMap.putAll(jsonBodyMap);
+                }
             }
+
 //            if (contentMediaType.includes(MediaType.APPLICATION_FORM_URLENCODED)) {}
 //            if (contentMediaType.includes(MediaType.MULTIPART_FORM_DATA)) {}
         }
         Map<String, Object> headerMap = new HashMap<>();
         if (sign.getInHeader()) {
-            headerMap.put("host", request.getRemoteHost().toLowerCase());
+            headerMap.put("Authorization", Optional.ofNullable(request.getHeader("Authorization")).orElse(""));
             headerMap.put("content-type", contentType);
-            headerMap.put("User_Agent", request.getHeader("User_Agent"));
+            headerMap.put("user-agent", request.getHeader("User-Agent"));
             if (log.isTraceEnabled()) {
                 headerMap.forEach((k, v) -> log.trace("headerMap; key: {}, value: {}", k, v));
             }
+            signMap.putAll(headerMap);
         }
-        sign.getCustomParamList().stream()
+        Optional.ofNullable(sign.getCustomParamList()).orElse(Collections.emptyList()).stream()
                 .filter(InterceptorsAutoConfigurationProperties.SignProperties.CustomParam::isEnable)
                 .forEach(v -> customParameter(request, v, signMap));
         return signMap;
@@ -72,6 +78,12 @@ public class SHA1WithRSASignUtil extends AbstractSignUtil{
     @Override
     public boolean verify(Map<String, Object> signParam) throws InvalidKeyException, SignatureException, NoSuchAlgorithmException {
         //排序， 生成签名string 根据算法签名
+        if (signParam == null || signParam.isEmpty()) {
+            if (log.isTraceEnabled()) {
+                log.trace("signParam is Null: {}", signParam);
+            }
+            return false;
+        }
         List<String> keyList = signParam.keySet().stream().sorted().toList();
         StringBuilder sb = new StringBuilder();
         for (String key : keyList) {
@@ -88,13 +100,21 @@ public class SHA1WithRSASignUtil extends AbstractSignUtil{
             }
         }
         sb.deleteCharAt(0);
-        String signString = sb.toString();
+        String signString = sb.toString().toLowerCase();
         Signature signature = Signature.getInstance(sign.getAlgorithm());
-        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("rsa");
-        keyPairGenerator.initialize(2048);
-        signature.initSign(keyPairGenerator.generateKeyPair().getPrivate());
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+        PublicKey publicKey;
+        try {
+            publicKey = keyFactory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(sign.getPublicKey().getBytes())));
+        } catch (InvalidKeySpecException e) {
+            if (log.isErrorEnabled()) {
+                log.error("密钥错误, e: ", e);
+            }
+            throw new RuntimeException(e);
+        }
+        signature.initVerify(publicKey);
         signature.update(signString.getBytes());
-        return signature.verify(signString.getBytes(StandardCharsets.UTF_8));
+        return signature.verify(Base64.getDecoder().decode(signString.getBytes(StandardCharsets.UTF_8)));
     }
 
 
@@ -112,18 +132,14 @@ public class SHA1WithRSASignUtil extends AbstractSignUtil{
             case QUERY,BODY-> {
                 String signStr = (String) signMap.get(sign.getSign().getName());
                 signMap.remove(sign.getSign().getName());
-                yield signStr;
+                yield Optional.ofNullable(signStr).orElseThrow(()->new IllegalArgumentException("requestSignStr not select RequestQuery and RequestBody, signName: " + sign.getSign().getName()));
             }
             case ALL -> Optional.ofNullable(request.getHeader(sign.getSign().getName())).orElseGet(()->{
-                String signStr = (String) signMap.get(sign.getSign().getName());
+                String[] signStr = (String[]) signMap.get(sign.getSign().getName());
                 signMap.remove(sign.getSign().getName());
-                return signStr;
-//              TODO 测试  yield signStr;
+                return Optional.ofNullable(signStr).orElseThrow(()->new IllegalArgumentException("requestSignStr not select RequestHead、RequestQuery and RequestBody, signName: " + sign.getSign().getName()))[0];
             });
         };
-        if (requestSignStr == null || requestSignStr.isBlank()) {
-            throw new IllegalArgumentException("requestSignStr not select RequestHead、RequestQuery and RequestBody, signName: " + sign.getSign().getName());
-        }
         return verify(signMap);
     }
 

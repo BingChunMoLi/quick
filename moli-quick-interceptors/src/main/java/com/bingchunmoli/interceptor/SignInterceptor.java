@@ -4,6 +4,7 @@ package com.bingchunmoli.interceptor;
 import com.bingchunmoli.properties.InterceptorsAutoConfigurationProperties;
 import com.bingchunmoli.util.SignUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.Nonnull;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -20,15 +21,14 @@ public class SignInterceptor implements HandlerInterceptor {
 
     private final InterceptorsAutoConfigurationProperties interceptorsAutoConfigurationProperties;
     private final SignUtil signUtil;
-    private final ObjectMapper om;
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    public boolean preHandle(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response, @Nonnull Object handler) throws Exception {
         final InterceptorsAutoConfigurationProperties.SignProperties sign = interceptorsAutoConfigurationProperties.getSign();
         if (isNotEnable(sign.isEnable())) {
             return true;
         }
-        if (request.getMethod().equalsIgnoreCase("OPTION")) {
+        if (request.getMethod().equalsIgnoreCase("OPTIONS")) {
             return true;
         }
         if (sign.getIgnorePathList().contains(request.getRequestURI())) {
@@ -39,13 +39,13 @@ public class SignInterceptor implements HandlerInterceptor {
 
 
     @Override
-    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+    public void postHandle(@Nonnull HttpServletRequest request,@Nonnull HttpServletResponse response,@Nonnull Object handler, ModelAndView modelAndView) throws Exception {
         HandlerInterceptor.super.postHandle(request, response, handler, modelAndView);
     }
 
 
     @Override
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+    public void afterCompletion(@Nonnull HttpServletRequest request,@Nonnull HttpServletResponse response,@Nonnull Object handler, Exception ex) throws Exception {
         HandlerInterceptor.super.afterCompletion(request, response, handler, ex);
     }
 

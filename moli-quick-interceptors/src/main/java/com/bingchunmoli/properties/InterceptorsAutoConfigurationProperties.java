@@ -4,6 +4,7 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Data
@@ -17,7 +18,7 @@ public class InterceptorsAutoConfigurationProperties {
         /**
          * 签名算法
          */
-        private String algorithm = "SHA1WithRSA";
+        private String algorithm = "SHA256WithRSA";
         /**
          * 是否包含请求头(Host,Content-Type,UA)
          */
@@ -25,15 +26,15 @@ public class InterceptorsAutoConfigurationProperties {
         /**
          * 时间参数
          */
-        private TimeParam time;
+        private TimeParam time = new TimeParam();
         /**
          * 随机数参数
          */
-        private NonceParam nonce;
+        private NonceParam nonce = new NonceParam();
 
-        private SignParam sign;
+        private SignParam sign = new SignParam();
 
-        private List<CustomParam> customParamList;
+        private List<CustomParam> customParamList = Collections.emptyList();
         /**
          * 忽略请求路径
          */
@@ -42,6 +43,16 @@ public class InterceptorsAutoConfigurationProperties {
          * 忽略请求参数,默认为file
          */
         private List<String> ignoreParametersList = List.of("file");
+
+        /**
+         * 私钥
+         */
+        private String privateKey;
+
+        /**
+         * 公钥
+         */
+        private String publicKey;
 
         public interface CustomParam{
 
@@ -72,7 +83,7 @@ public class InterceptorsAutoConfigurationProperties {
         public static class NonceParam implements CustomParam{
             private boolean enable = false;
             /**
-             * 随机数名字
+             * 随机数name
              */
             private String name = "nonce";
             /**
@@ -85,7 +96,7 @@ public class InterceptorsAutoConfigurationProperties {
         public static class TimeParam implements CustomParam{
             private boolean enable = false;
             /**
-             * 随机数名字
+             * 时间戳name
              */
             private String name = "timestamp";
             /**
@@ -98,7 +109,7 @@ public class InterceptorsAutoConfigurationProperties {
         public static class SignParam implements CustomParam{
             private boolean enable = true;
             /**
-             * 随机数名字
+             * 签名参数name
              */
             private String name = "sign";
             /**

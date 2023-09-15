@@ -4,7 +4,7 @@ import com.bingchunmoli.filter.CacheFilter;
 import com.bingchunmoli.interceptor.SignInterceptor;
 import com.bingchunmoli.properties.InterceptorsAutoConfigurationProperties;
 import com.bingchunmoli.registrar.InterceptorsRegistrar;
-import com.bingchunmoli.util.SHA1WithRSASignUtil;
+import com.bingchunmoli.util.SHA256WithRSASignUtil;
 import com.bingchunmoli.util.SignUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ public class SignAutoConfiguration {
     public SignUtil signUtil(){
         String algorithm = interceptorsAutoConfigurationProperties.getSign().getAlgorithm();
         return switch (algorithm) {
-            case "SHA1WithRSA" -> new SHA1WithRSASignUtil(om, interceptorsAutoConfigurationProperties.getSign());
+            case "SHA256WithRSA" -> new SHA256WithRSASignUtil(om, interceptorsAutoConfigurationProperties.getSign());
             default -> throw new IllegalStateException("Unexpected value: " + algorithm);
         };
     }
