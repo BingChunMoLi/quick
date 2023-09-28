@@ -11,7 +11,7 @@ import java.util.Map;
 public interface SignUtil {
     /**
      * 获取请求的签名参数
-     * @return
+     * @return signMap
      */
     Map<String, Object> getSignParam(HttpServletRequest request) throws IOException;
 
@@ -20,7 +20,7 @@ public interface SignUtil {
      * @param signParam 签名参数
      * @return 签名验证是否成
      */
-    boolean verify(Map<String, Object> signParam) throws InvalidKeyException, SignatureException, NoSuchAlgorithmException;
+    boolean verify(Map<String, Object> signParam, String requestSignStr) throws InvalidKeyException, SignatureException, NoSuchAlgorithmException;
 
     /**
      * 比较签名

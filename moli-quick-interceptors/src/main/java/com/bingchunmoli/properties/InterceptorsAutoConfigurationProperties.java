@@ -1,10 +1,12 @@
 package com.bingchunmoli.properties;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @Data
@@ -13,6 +15,8 @@ public class InterceptorsAutoConfigurationProperties {
     private SignProperties sign;
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class SignProperties{
         private boolean enable = false;
         /**
@@ -23,18 +27,9 @@ public class InterceptorsAutoConfigurationProperties {
          * 是否包含请求头(Host,Content-Type,UA)
          */
         private Boolean inHeader = false;
-        /**
-         * 时间参数
-         */
-        private TimeParam time = new TimeParam();
-        /**
-         * 随机数参数
-         */
-        private NonceParam nonce = new NonceParam();
 
-        private SignParam sign = new SignParam();
 
-        private List<CustomParam> customParamList = Collections.emptyList();
+        private List<CustomParam> customParamList = new ArrayList<>();
         /**
          * 忽略请求路径
          */
@@ -54,70 +49,44 @@ public class InterceptorsAutoConfigurationProperties {
          */
         private String publicKey;
 
-        public interface CustomParam{
-
+        @Data
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class CustomParam{
+            private boolean enable = false;
             /**
-             * 是否启用
-             * @return 是否启用
+             * 随机数name
              */
-            boolean isEnable();
-
+            private String name;
             /**
-             * 参数名称
-             * @return 参数名称
+             * 是否是签名key
              */
-            String getName();
-
+            private boolean signStr = false;
             /**
-             * 参数位置枚举
-             * @return 参数位置枚举
+             * 参数位置
              */
-            ParameterPosition getParameterPosition();
-
+            private ParameterPosition parameterPosition = ParameterPosition.ALL;
         }
 
         /**
          * 随机数参数
          */
-        @Data
-        public static class NonceParam implements CustomParam{
-            private boolean enable = false;
-            /**
-             * 随机数name
-             */
+        @Deprecated
+        public static class NonceParam extends CustomParam{
             private String name = "nonce";
-            /**
-             * 参数位置
-             */
-            private ParameterPosition parameterPosition = ParameterPosition.ALL;
         }
 
-        @Data
-        public static class TimeParam implements CustomParam{
-            private boolean enable = false;
-            /**
-             * 时间戳name
-             */
+        @Deprecated
+        public static class TimeParam extends CustomParam{
             private String name = "timestamp";
-            /**
-             * 参数位置
-             */
-            private ParameterPosition parameterPosition = ParameterPosition.ALL;
         }
 
-        @Data
-        public static class SignParam implements CustomParam{
-            private boolean enable = true;
-            /**
-             * 签名参数name
-             */
+        @Deprecated
+        public static class SignParam extends CustomParam{
             private String name = "sign";
-            /**
-             * 参数位置
-             */
-            private ParameterPosition parameterPosition = ParameterPosition.ALL;
         }
 
+        @Getter
         public enum ParameterPosition{
             /**
              * 请求头

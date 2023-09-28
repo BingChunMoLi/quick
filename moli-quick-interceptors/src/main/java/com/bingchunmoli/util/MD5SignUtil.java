@@ -20,7 +20,7 @@ public class MD5SignUtil implements SignUtil{
     }
 
     @Override
-    public boolean verify(Map<String, Object> signParam) throws InvalidKeyException, SignatureException, NoSuchAlgorithmException {
+    public boolean verify(Map<String, Object> signParam, String requestSignStr) throws InvalidKeyException, SignatureException, NoSuchAlgorithmException {
         return false;
     }
 

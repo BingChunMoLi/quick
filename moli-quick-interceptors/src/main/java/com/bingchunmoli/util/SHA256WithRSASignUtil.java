@@ -56,8 +56,8 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil{
         Map<String, Object> headerMap = new HashMap<>();
         if (sign.getInHeader()) {
             headerMap.put("Authorization", Optional.ofNullable(request.getHeader("Authorization")).orElse(""));
-            headerMap.put("content-type", contentType);
-            headerMap.put("user-agent", request.getHeader("User-Agent"));
+//            headerMap.put("Content-type", contentType);
+//            headerMap.put("user-agent", request.getHeader("User-Agent"));
             if (log.isTraceEnabled()) {
                 headerMap.forEach((k, v) -> log.trace("headerMap; key: {}, value: {}", k, v));
             }
@@ -65,6 +65,7 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil{
         }
         Optional.ofNullable(sign.getCustomParamList()).orElse(Collections.emptyList()).stream()
                 .filter(InterceptorsAutoConfigurationProperties.SignProperties.CustomParam::isEnable)
+                .filter(v->!v.isSignStr())
                 .forEach(v -> customParameter(request, v, signMap));
         return signMap;
     }
@@ -76,7 +77,7 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil{
      * @return 签名
      */
     @Override
-    public boolean verify(Map<String, Object> signParam) throws InvalidKeyException, SignatureException, NoSuchAlgorithmException {
+    public boolean verify(Map<String, Object> signParam, String requestSignStr) throws InvalidKeyException, SignatureException, NoSuchAlgorithmException {
         //排序， 生成签名string 根据算法签名
         if (signParam == null || signParam.isEmpty()) {
             if (log.isTraceEnabled()) {
@@ -105,7 +106,7 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil{
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         PublicKey publicKey;
         try {
-            publicKey = keyFactory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(sign.getPublicKey().getBytes())));
+            publicKey = keyFactory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(sign.getPublicKey().getBytes(StandardCharsets.UTF_8))));
         } catch (InvalidKeySpecException e) {
             if (log.isErrorEnabled()) {
                 log.error("密钥错误, e: ", e);
@@ -113,8 +114,8 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil{
             throw new RuntimeException(e);
         }
         signature.initVerify(publicKey);
-        signature.update(signString.getBytes());
-        return signature.verify(Base64.getDecoder().decode(signString.getBytes(StandardCharsets.UTF_8)));
+        signature.update(signString.getBytes(StandardCharsets.UTF_8));
+        return signature.verify(requestSignStr.getBytes(StandardCharsets.UTF_8));
     }
 
 
@@ -127,20 +128,25 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil{
     @Override
     public boolean compare(HttpServletRequest request) throws IOException, SignatureException, NoSuchAlgorithmException, InvalidKeyException {
         Map<String, Object> signMap = getSignParam(request);
-        String requestSignStr = switch (sign.getSign().getParameterPosition()) {
-            case HEAD-> Optional.ofNullable(request.getHeader(sign.getSign().getName())).orElseThrow(()->new IllegalArgumentException("sign" + sign.getSign().getName() + " is miss"));
+
+        InterceptorsAutoConfigurationProperties.SignProperties.CustomParam signParamConfig = sign.getCustomParamList().stream()
+                .filter(InterceptorsAutoConfigurationProperties.SignProperties.CustomParam::isSignStr)
+                .findFirst()
+                .orElseThrow(()->new IllegalArgumentException("Sign param is Not Configuration"));
+        String requestSignStr = switch (signParamConfig.getParameterPosition()) {
+            case HEAD-> Optional.ofNullable(request.getHeader(signParamConfig.getName())).orElseThrow(()->new IllegalArgumentException("sign" + signParamConfig.getName() + " is miss"));
             case QUERY,BODY-> {
-                String signStr = (String) signMap.get(sign.getSign().getName());
-                signMap.remove(sign.getSign().getName());
-                yield Optional.ofNullable(signStr).orElseThrow(()->new IllegalArgumentException("requestSignStr not select RequestQuery and RequestBody, signName: " + sign.getSign().getName()));
+                String signStr = (String) signMap.get(signParamConfig.getName());
+                signMap.remove(signParamConfig.getName());
+                yield Optional.ofNullable(signStr).orElseThrow(()->new IllegalArgumentException("requestSignStr not select RequestQuery and RequestBody, signName: " + signParamConfig.getName()));
             }
-            case ALL -> Optional.ofNullable(request.getHeader(sign.getSign().getName())).orElseGet(()->{
-                String[] signStr = (String[]) signMap.get(sign.getSign().getName());
-                signMap.remove(sign.getSign().getName());
-                return Optional.ofNullable(signStr).orElseThrow(()->new IllegalArgumentException("requestSignStr not select RequestHead、RequestQuery and RequestBody, signName: " + sign.getSign().getName()))[0];
+            case ALL -> Optional.ofNullable(request.getHeader(signParamConfig.getName())).orElseGet(()->{
+                String[] signStr = (String[]) signMap.get(signParamConfig.getName());
+                signMap.remove(signParamConfig.getName());
+                return Optional.ofNullable(signStr).orElseThrow(()->new IllegalArgumentException("requestSignStr not select RequestHead、RequestQuery and RequestBody, signName: " + signParamConfig.getName()))[0];
             });
         };
-        return verify(signMap);
+        return verify(signMap, requestSignStr);
     }
 
     private void customParameter(HttpServletRequest request, InterceptorsAutoConfigurationProperties.SignProperties.CustomParam customParam, Map<String, Object> signMap){
@@ -174,10 +180,8 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil{
 
         if (node.isArray())
         {
-            Iterator<JsonNode> it = node.iterator();
-            while (it.hasNext())
-            {
-                jsonLeaf(it.next(), jsonBodyMap);
+            for (JsonNode jsonNode : node) {
+                jsonLeaf(jsonNode, jsonBodyMap);
             }
         }
     }
