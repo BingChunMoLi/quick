@@ -1,5 +1,6 @@
 package com.bingchunmoli.autoconfigure;
 
+import com.bingchunmoli.autoconfigure.redis.util.RedisUtil;
 import com.bingchunmoli.filter.CacheFilter;
 import com.bingchunmoli.interceptor.SignInterceptor;
 import com.bingchunmoli.properties.InterceptorsAutoConfigurationProperties;
@@ -21,12 +22,13 @@ public class SignAutoConfiguration {
 
     private final InterceptorsAutoConfigurationProperties interceptorsAutoConfigurationProperties;
     private final ObjectMapper om;
+    private final RedisUtil redisUtil;
 
     @Bean
     public SignUtil signUtil(){
         String algorithm = interceptorsAutoConfigurationProperties.getSign().getAlgorithm();
         return switch (algorithm) {
-            case "SHA256WithRSA" -> new SHA256WithRSASignUtil(om, interceptorsAutoConfigurationProperties.getSign());
+            case "SHA256WithRSA" -> new SHA256WithRSASignUtil(om, interceptorsAutoConfigurationProperties.getSign(), redisUtil);
             default -> throw new IllegalStateException("Unexpected value: " + algorithm);
         };
     }

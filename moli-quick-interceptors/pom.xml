@@ -36,5 +36,9 @@
             <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>com.bingchunmoli</groupId>
+            <artifactId>moli-quick-redis-spring-boot-starter</artifactId>
+        </dependency>
     </dependencies>
 </project>

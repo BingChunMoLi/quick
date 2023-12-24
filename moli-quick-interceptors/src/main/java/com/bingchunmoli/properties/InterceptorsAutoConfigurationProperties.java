@@ -24,12 +24,18 @@ public class InterceptorsAutoConfigurationProperties {
          */
         private String algorithm = "SHA256WithRSA";
         /**
-         * 是否包含请求头(Host,Content-Type,UA)
+         * 时间
          */
-        private Boolean inHeader = false;
+        private CustomParam timestamp;
+        /**
+         * 随机字符
+         */
+        private CustomParam nonce;
+        /**
+         * 签名字符串
+         */
+        private CustomParam sign;
 
-
-        private List<CustomParam> customParamList = new ArrayList<>();
         /**
          * 忽略请求路径
          */
@@ -49,41 +55,26 @@ public class InterceptorsAutoConfigurationProperties {
          */
         private String publicKey;
 
+        /**
+         * 签名有效期
+         */
+        private long signValidTime = 2000;
+
+        private String nonceRedisPrefix = "moli:sign:nonce:";
+
         @Data
         @NoArgsConstructor
         @AllArgsConstructor
         public static class CustomParam{
             private boolean enable = false;
             /**
-             * 随机数name
+             * name
              */
             private String name;
-            /**
-             * 是否是签名key
-             */
-            private boolean signStr = false;
             /**
              * 参数位置
              */
             private ParameterPosition parameterPosition = ParameterPosition.ALL;
-        }
-
-        /**
-         * 随机数参数
-         */
-        @Deprecated
-        public static class NonceParam extends CustomParam{
-            private String name = "nonce";
-        }
-
-        @Deprecated
-        public static class TimeParam extends CustomParam{
-            private String name = "timestamp";
-        }
-
-        @Deprecated
-        public static class SignParam extends CustomParam{
-            private String name = "sign";
         }
 
         @Getter
@@ -101,7 +92,7 @@ public class InterceptorsAutoConfigurationProperties {
              */
             BODY(),
             /**
-             * 依次探测
+             * 从HEAD, QUERY, BODY顺序依次探测
              */
             ALL()
         }

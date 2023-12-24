@@ -10,8 +10,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.http.MediaType;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.util.ContentCachingRequestWrapper;
 
 
 @Slf4j
@@ -34,7 +36,11 @@ public class SignInterceptor implements HandlerInterceptor {
         if (sign.getIgnorePathList().contains(request.getRequestURI())) {
             return true;
         }
-        return signUtil.compare(request);
+        //如果请求使用jsonBody方式并且没有包装过可重复读取,则包装可重复读取ServletRequest
+        if (request.getContentType() != null && MediaType.APPLICATION_JSON.includes(MediaType.parseMediaType(request.getContentType())) && !(request instanceof ContentCachingRequestWrapper)) {
+            request = new ContentCachingRequestWrapper(request);
+        }
+        return signUtil.verify(request);
     }
 
 

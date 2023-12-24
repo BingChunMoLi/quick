@@ -32,48 +32,37 @@ class RequestHttp {
      */
     this.service.interceptors.request.use(
       (config: CustomAxiosRequestConfig) => {
-        // 当前请求不需要显示 loading，在 api 服务中通过指定的第三个参数: { noLoading: true } 来控制
         const t = Date.now()
         const nonce = Math.random().toString(10).slice(-8)
         /**
          * 协议 路径\n
          * 请求参数 authorization=token&str=world
-         * 全部小写, 参数字母表排序
          */
-        console.log(config)
-        console.log(config.params)
-        console.log(config.data)
         const signMap = new Map()
-
         for (const key in config.params) {
           if (Object.prototype.hasOwnProperty.call(config.params, key)) {
             const element = config.params[key]
             signMap.set(key, element)
           }
         }
-        for (const key in config.data) {
-          if (Object.prototype.hasOwnProperty.call(config.data, key)) {
-            const element = config.data[key]
-            signMap.set(key, element)
-          }
+        if(config.data){
+          signMap.set('body', JSON.stringify(config.data))
         }
-        signMap.set('authorization', 'token')
+        signMap.set('authorization', '')
         signMap.set('t', t)
         signMap.set('nonce', nonce)
         const sortMap = new Map([...signMap].sort())
-        console.log(JSON.stringify(config.params))
-        console.log(JSON.stringify(config.data))
-        const paramSignStr = ''
-        for (const sortMapKey in sortMap) {
-          paramSignStr + '&' + sortMapKey + '=' + sortMap.get(sortMapKey)
+        let paramSignStr = ''
+        for (const [key, value] of sortMap) {
+          paramSignStr = paramSignStr + '&' + key + '=' + value
         }
-        paramSignStr.substring(1, paramSignStr.length)
-        const signStr = config.method + ' ' + config.url + '\n' + paramSignStr
+        paramSignStr = paramSignStr.substring(1, paramSignStr.length)
+        const signStr = config.method?.toLocaleLowerCase() + ' ' + config.url?.toLocaleLowerCase() + '\n' + paramSignStr
         if (config.headers && typeof config.headers.set === 'function') {
-          config.headers.set('Authorization', 'token')
+          config.headers.set('Authorization', '')
           config.headers.set('t', t)
           config.headers.set('nonce', nonce)
-          config.headers.set('sign', sign(signStr.toLocaleLowerCase()))
+          config.headers.set('sign', sign(signStr))
         }
         return config
       },

@@ -23,10 +23,12 @@ function postHello() {
 }
 
 function postHello2() {
-  request.post("/hello", {str: 'world',a: {
-    b: 'c',
-    c: 'd'
-  }})
+  request.post("/hello", {
+    str: 'world',
+    a: {
+      b: 'c',
+      c: 'd'
+    }})
 }
 </script>
 
