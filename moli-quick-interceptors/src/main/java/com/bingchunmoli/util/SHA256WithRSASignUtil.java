@@ -17,7 +17,9 @@ import org.springframework.http.MediaType;
 import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
-import java.security.*;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.Signature;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
@@ -30,6 +32,7 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil {
     private final ObjectMapper om;
     private final InterceptorsAutoConfigurationProperties.SignProperties sign;
     private final RedisUtil redisUtil;
+    private final static String BODY_KEY = "body";
 
     @Override
     public boolean verify(HttpServletRequest request) {
@@ -69,20 +72,19 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil {
     @Override
     @SneakyThrows
     public SignParamDTO getSignParam(HttpServletRequest request) {
-        SignParamDTO.SignParamDTOBuilder signParamBuilder = verifyCustomParam(request);
         SortedMap<String, String> paramMap = new TreeMap<>();
+        String contentType = request.getContentType();
+        if (contentType != null && MediaType.parseMediaType(contentType).includes(MediaType.APPLICATION_JSON)) {
+            String bodyStr = request.getReader().lines().collect(Collectors.joining());
+            paramMap.put(BODY_KEY, bodyStr);
+        }
+        SignParamDTO.SignParamDTOBuilder signParamBuilder = verifyCustomParam(request, paramMap.get(BODY_KEY));
         paramMap.put("authorization", Optional.ofNullable(request.getHeader("authorization")).orElse(""));
         Map<String, String[]> parameterMap = request.getParameterMap();
         if (log.isTraceEnabled()) {
             parameterMap.forEach((k, v) -> log.trace("request.parameterMap;key: {}, value: {}", k, v));
         }
         parameterMap.forEach((k, v) -> paramMap.put(k, v[0]));
-        parameterMap.forEach((key, value) -> paramMap.put(key, value[0]));
-        String contentType = request.getContentType();
-        if (contentType != null && MediaType.parseMediaType(contentType).includes(MediaType.APPLICATION_JSON)) {
-            String bodyStr = request.getReader().lines().collect(Collectors.joining());
-            paramMap.put("body", bodyStr);
-        }
         CustomParamDTO timestamp = signParamBuilder.getTimestamp();
         if (sign.getTimestamp().isEnable() && timestamp.isHasValue()) {
             paramMap.put(timestamp.getName(), timestamp.getValue());
@@ -106,15 +108,16 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil {
     }
 
     /**
-     * 验证自定义参数主要包括
+     * 验证自定义参数并提取
      * sign: 必须配置并参数存在
      * timestamp: 是否配置并是否过期
      * nonce: 是否配置并是否已使用(需要redis)
      *
      * @param request 请求
+     * @param cacheBody 缓存的body
      * @return 自定义参数builder 含有构建sign参数的基本信息缓存
      */
-    private SignParamDTO.SignParamDTOBuilder verifyCustomParam(HttpServletRequest request) {
+    private SignParamDTO.SignParamDTOBuilder verifyCustomParam(HttpServletRequest request, String cacheBody) {
         if (!sign.getSign().isEnable()) {
             throw new SignConfigException("sign isn't enable");
         }
@@ -124,7 +127,7 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil {
         SignParamDTO.SignParamDTOBuilder.SignParamDTOBuilderBuilder signParamBuilder = SignParamDTO.SignParamDTOBuilder.builder();
         InterceptorsAutoConfigurationProperties.SignProperties.CustomParam customParamTimestamp = sign.getTimestamp();
         if (isCustomParamEnable(customParamTimestamp) && customParamTimestamp.isEnable()) {
-            CustomParamDTO timestampParam = getCustomParam(customParamTimestamp, request);
+            CustomParamDTO timestampParam = getCustomParam(customParamTimestamp, request, cacheBody);
             long timestamp = Optional.ofNullable(timestampParam)
                     .map(CustomParamDTO::getValue)
                     .map(Long::parseLong)
@@ -138,7 +141,7 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil {
         }
         InterceptorsAutoConfigurationProperties.SignProperties.CustomParam customParamNonce = sign.getNonce();
         if (isCustomParamEnable(customParamNonce) && customParamNonce.isEnable()) {
-            CustomParamDTO nonceParam = getCustomParam(customParamNonce, request);
+            CustomParamDTO nonceParam = getCustomParam(customParamNonce, request, cacheBody);
             String nonce = Optional.ofNullable(nonceParam)
                     .map(CustomParamDTO::getValue)
                     .orElseThrow(() -> new SignParamIllegalArgumentException(MessageFormatter.format("customParam {} is wrong, miss nonce requestParam", customParamNonce).getMessage()));
@@ -149,7 +152,7 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil {
             nonceParam.setHasValue(true);
             signParamBuilder.nonce(nonceParam);
         }
-        String signStr = Optional.ofNullable(getCustomParam(sign.getSign(), request))
+        String signStr = Optional.ofNullable(getCustomParam(sign.getSign(), request, cacheBody))
                 .map(CustomParamDTO::getValue)
                 .orElseThrow(() -> new SignParamIllegalArgumentException(MessageFormatter.format("customParam {} is wrong, miss sign requestParam", this.sign.getSign()).getMessage()));
         signParamBuilder.sign(CustomParamDTO.builder()
@@ -173,9 +176,10 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil {
      *
      * @param customParam customParam配置
      * @param request     请求
+     * @param cacheBody 缓存的body
      * @return CustomParamDTO实体
      */
-    private CustomParamDTO getCustomParam(InterceptorsAutoConfigurationProperties.SignProperties.CustomParam customParam, HttpServletRequest request) {
+    private CustomParamDTO getCustomParam(InterceptorsAutoConfigurationProperties.SignProperties.CustomParam customParam, HttpServletRequest request, String cacheBody) {
         if (!customParam.isEnable()) {
             return null;
         }
@@ -184,9 +188,9 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil {
         switch (customParam.getParameterPosition()) {
             case HEAD -> builder.value(request.getHeader(name));
             case QUERY -> builder.value(request.getParameter(name));
-            case BODY -> builder.value(getCustomParamByBody(request, name));
+            case BODY -> builder.value(getCustomParamByBody(request, name, cacheBody));
             case ALL -> builder.value(Optional.ofNullable(request.getHeader(name))
-                    .orElseGet(() -> getCustomParamByBody(request, name)));
+                    .orElseGet(() -> getCustomParamByBody(request, name, cacheBody)));
         }
         return builder.build();
     }
@@ -198,20 +202,19 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil {
      *
      * @param request         请求
      * @param customParamName 自定义参数的name
+     * @param cacheBody 缓存的body
      * @return customParam的值，可能为空
      */
     @SneakyThrows
-    private String getCustomParamByBody(HttpServletRequest request, String customParamName) {
-        String contentType = request.getContentType();
-        if (StringUtils.hasText(contentType) && MediaType.APPLICATION_JSON.includes(MediaType.parseMediaType(contentType))) {
-            String bodyStr = request.getReader().lines().collect(Collectors.joining());
-            JsonNode jsonNode = om.readTree(bodyStr);
+    private String getCustomParamByBody(HttpServletRequest request, String customParamName, String cacheBody) {
+        if (StringUtils.hasText(cacheBody)) {
+            JsonNode jsonNode = om.readTree(cacheBody);
             List<String> value = jsonNode.findValuesAsText(customParamName);
             if (!value.isEmpty()) {
                 return value.get(0);
+            } else {
+                return request.getParameter(customParamName);
             }
-        } else {
-            return request.getParameter(customParamName);
         }
         return null;
     }
