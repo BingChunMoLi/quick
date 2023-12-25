@@ -19,11 +19,11 @@ function hello() {
 }
 
 function postHello() {
-  request.post("/hello", {str: 'world'})
+  request.post("/hello2", {str: 'world'})
 }
 
 function postHello2() {
-  request.post("/hello", {
+  request.post("/hello2", {
     str: 'world',
     a: {
       b: 'c',

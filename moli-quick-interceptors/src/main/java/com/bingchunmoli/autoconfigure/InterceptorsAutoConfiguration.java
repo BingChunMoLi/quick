@@ -18,12 +18,6 @@ import org.springframework.context.annotation.Bean;
 @EnableConfigurationProperties(InterceptorsAutoConfigurationProperties.class)
 public class InterceptorsAutoConfiguration {
 
-    @Bean
-    @ConditionalOnProperty(prefix = "moli.interceptor.sign.sign", havingValue = "true")
-    SignAutoConfiguration signAutoConfiguration() {
-        return new SignAutoConfiguration();
-    }
-
     @RequiredArgsConstructor
     @AutoConfiguration(after = {ObjectMapper.class, RedisUtil.class, InterceptorsAutoConfigurationProperties.class})
     @ConditionalOnProperty(prefix = "moli.interceptor.sign.sign", value = "enable", havingValue = "true")
