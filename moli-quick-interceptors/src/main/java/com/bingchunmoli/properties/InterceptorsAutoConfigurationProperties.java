@@ -18,7 +18,6 @@ public class InterceptorsAutoConfigurationProperties {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class SignProperties{
-        private boolean enable = false;
         /**
          * 签名算法
          */

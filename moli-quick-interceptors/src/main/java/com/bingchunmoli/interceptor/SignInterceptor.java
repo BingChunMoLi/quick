@@ -3,7 +3,6 @@ package com.bingchunmoli.interceptor;
 
 import com.bingchunmoli.properties.InterceptorsAutoConfigurationProperties;
 import com.bingchunmoli.util.SignUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -18,7 +17,7 @@ import org.springframework.web.util.ContentCachingRequestWrapper;
 
 @Slf4j
 @RequiredArgsConstructor
-@ConditionalOnClass({ObjectMapper.class, InterceptorsAutoConfigurationProperties.class})
+@ConditionalOnClass({SignUtil.class})
 public class SignInterceptor implements HandlerInterceptor {
 
     private final InterceptorsAutoConfigurationProperties interceptorsAutoConfigurationProperties;
@@ -27,7 +26,7 @@ public class SignInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response, @Nonnull Object handler) throws Exception {
         final InterceptorsAutoConfigurationProperties.SignProperties sign = interceptorsAutoConfigurationProperties.getSign();
-        if (isNotEnable(sign.isEnable())) {
+        if (isNotEnable(sign.getSign().isEnable())) {
             return true;
         }
         if (request.getMethod().equalsIgnoreCase("OPTIONS")) {

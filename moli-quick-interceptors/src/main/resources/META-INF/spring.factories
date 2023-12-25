@@ -1,3 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-com.bingchunmoli.autoconfigure.InterceptorsAutoConfiguration,\
-com.bingchunmoli.autoconfigure.SignAutoConfiguration
+com.bingchunmoli.autoconfigure.InterceptorsAutoConfiguration
