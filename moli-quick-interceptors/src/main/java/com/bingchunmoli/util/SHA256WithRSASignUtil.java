@@ -84,7 +84,9 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil {
         if (log.isTraceEnabled()) {
             parameterMap.forEach((k, v) -> log.trace("request.parameterMap;key: {}, value: {}", k, v));
         }
-        parameterMap.forEach((k, v) -> paramMap.put(k, v[0]));
+        SortedMap<String, String> finalParamMap = new TreeMap<>();
+        parameterMap.forEach((k, v) -> finalParamMap.put(k, v[0]));
+        paramMap.putAll(finalParamMap);
         CustomParamDTO timestamp = signParamBuilder.getTimestamp();
         if (sign.getTimestamp().isEnable() && timestamp.isHasValue()) {
             paramMap.put(timestamp.getName(), timestamp.getValue());
@@ -95,12 +97,16 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil {
         }
         SignParamDTO signParam = new SignParamDTO();
         signParam.setSignatureStr(signParamBuilder.getSign().getValue());
+        if (!InterceptorsAutoConfigurationProperties.SignProperties.ParameterPosition.HEAD.equals(sign.getSign().getParameterPosition())) {
+            paramMap.remove(signParamBuilder.getSign().getName());
+        }
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(request.getMethod().toLowerCase())
                 .append(" ")
                 .append(request.getRequestURI());
         if (!paramMap.isEmpty()) {
             stringBuilder.append("\n");
+            paramMap = paramMap.entrySet().stream().filter(v -> !sign.getIgnoreParametersList().contains(v.getKey())).collect(TreeMap::new, (k, v) -> k.put(v.getKey(), v.getValue()), TreeMap::putAll);
             paramMap.forEach((k,v)-> stringBuilder.append(k).append("=").append(v).append("&"));
             stringBuilder.deleteCharAt(stringBuilder.length() - 1);
         }
