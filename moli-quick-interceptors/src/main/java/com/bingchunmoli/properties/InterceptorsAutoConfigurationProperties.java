@@ -9,11 +9,19 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 拦截器自动配置属性
+ *
+ * @author MoLi
+ */
 @Data
 @ConfigurationProperties(prefix = "moli.interceptor")
 public class InterceptorsAutoConfigurationProperties {
     private SignProperties sign;
 
+    /**
+     * 签名配置属性
+     */
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

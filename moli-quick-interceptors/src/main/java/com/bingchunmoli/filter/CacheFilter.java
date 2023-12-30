@@ -10,6 +10,11 @@ import org.springframework.web.util.ContentCachingRequestWrapper;
 
 import java.io.IOException;
 
+/**
+ * 缓存httpBody请求数据库流拦截器
+ *
+ * @author MoLi
+ */
 public class CacheFilter extends HttpFilter {
 
     @Override

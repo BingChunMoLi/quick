@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 /**
+ * 自定义参数DTO
  * @author moli
  */
 @Data

@@ -19,11 +19,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.bingchunmoli</groupId>
             <artifactId>moli-quick-redis-spring-boot-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.bingchunmoli</groupId>
@@ -36,13 +36,11 @@
         <dependency>
             <groupId>com.bingchunmoli</groupId>
             <artifactId>moli-quick-aop-boot-starter</artifactId>
-            <version>${project.version}</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>com.bingchunmoli</groupId>
             <artifactId>moli-quick-interceptors</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>

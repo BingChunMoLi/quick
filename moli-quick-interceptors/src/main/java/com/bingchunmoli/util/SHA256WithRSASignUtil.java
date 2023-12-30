@@ -25,6 +25,11 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * SHA256WithRSA签名工具类
+ *
+ * @author MoLi
+ */
 @Slf4j
 @RequiredArgsConstructor
 public class SHA256WithRSASignUtil extends AbstractSignUtil {
@@ -40,7 +45,7 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil {
         return doVerify(signParam);
     }
 
-    @SneakyThrows
+    @SneakyThrows(Exception.class)
     private boolean doVerify(SignParamDTO signParam) {
         Signature signature = Signature.getInstance(sign.getAlgorithm());
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
@@ -63,7 +68,7 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil {
      * 获取请求的签名参数
      * 构建方式
      * 协议 路径\n
-     * 请求参数 authorization=token&str=world
+     * 请求参数 authorization=token&amp;str=world
      * 协议路径小写, 参数字母表排序
      *
      * @param request 请求

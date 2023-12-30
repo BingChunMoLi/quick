@@ -8,6 +8,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+/**
+ * 拦截器注册器
+ *
+ * @author MoLi
+ */
 @RequiredArgsConstructor
 @ConditionalOnBean({InterceptorsAutoConfigurationProperties.class, SignInterceptor.class})
 public class InterceptorsRegistrar implements WebMvcConfigurer {
