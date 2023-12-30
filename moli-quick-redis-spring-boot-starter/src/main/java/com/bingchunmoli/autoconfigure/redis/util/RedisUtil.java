@@ -12,7 +12,6 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author BingChunMoLi
  */
-//@Component
 @RequiredArgsConstructor
 public class RedisUtil {
     public final RedisTemplate redisTemplate;

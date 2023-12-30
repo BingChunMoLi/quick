@@ -6,7 +6,7 @@
 
     <groupId>com.bingchunmoli</groupId>
     <artifactId>moli-quick-spring-boot-starter</artifactId>
-    <version>1.0.8-bate</version>
+    <version>1.0.9-bate</version>
     <packaging>pom</packaging>
 
     <name>quick</name>
@@ -16,8 +16,8 @@
         SpringBootQuickStarter
     </description>
     <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
     </properties>
 
     <modules>
@@ -26,6 +26,7 @@
         <module>moli-quick-spring-boot-starter-common-test</module>
         <module>moli-common-beans</module>
         <module>moli-quick-aop-boot-starter</module>
+        <module>moli-quick-interceptors</module>
     </modules>
 
     <developers>
@@ -65,7 +66,7 @@
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
-                <version>3.1.0</version>
+                <version>3.2.1</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
