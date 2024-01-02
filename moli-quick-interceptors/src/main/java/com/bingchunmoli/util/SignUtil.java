@@ -14,6 +14,7 @@ public interface SignUtil {
      */
     SignParamDTO getSignParam(HttpServletRequest request);
 
+
     /**
      * 根据请求进行签名验证
      * @param request 请求

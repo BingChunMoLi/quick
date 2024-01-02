@@ -45,7 +45,7 @@ public class SHA256WithRSASignUtil extends AbstractSignUtil {
         return doVerify(signParam);
     }
 
-    @SneakyThrows(Exception.class)
+    @SneakyThrows
     private boolean doVerify(SignParamDTO signParam) {
         Signature signature = Signature.getInstance(sign.getAlgorithm());
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");

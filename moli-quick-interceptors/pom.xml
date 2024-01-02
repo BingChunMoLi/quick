@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>moli-quick-interceptors</artifactId>
-
+  
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>

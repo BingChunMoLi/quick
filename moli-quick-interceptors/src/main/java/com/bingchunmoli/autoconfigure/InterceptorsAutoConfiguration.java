@@ -40,10 +40,10 @@ public class InterceptorsAutoConfiguration {
          * @return signUtil
          */
         @Bean
-        SignUtil signUtil(InterceptorsAutoConfigurationProperties properties, ObjectMapper om, RedisUtil redisUtil) {
-            String algorithm = properties.getSign().getAlgorithm();
+        SignUtil signUtil(InterceptorsAutoConfigurationProperties propertie, ObjectMapper om, RedisUtil redisUtil) {
+            String algorithm = propertie.getSign().getAlgorithm();
             return switch (algorithm) {
-                case "SHA256WithRSA" -> new SHA256WithRSASignUtil(om, properties.getSign(), redisUtil);
+                case "SHA256WithRSA" -> new SHA256WithRSASignUtil(om, propertie.getSign(), redisUtil);
                 default -> throw new IllegalStateException("Unexpected value: " + algorithm);
             };
         }
