@@ -14,7 +14,11 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 
-
+/**
+ * 签名拦截器
+ *
+ * @author MoLi
+ */
 @Slf4j
 @RequiredArgsConstructor
 @ConditionalOnClass({SignUtil.class})

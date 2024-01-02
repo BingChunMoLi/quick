@@ -6,25 +6,21 @@
     <parent>
         <groupId>com.bingchunmoli</groupId>
         <artifactId>moli-quick-spring-boot-starter</artifactId>
-        <version>1.0.9-bate</version>
+        <version>1.0.10-bate</version>
     </parent>
 
     <artifactId>moli-quick-interceptors</artifactId>
-
-    <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-
+  
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -34,11 +30,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
+            <scope>compile</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>com.bingchunmoli</groupId>
             <artifactId>moli-quick-redis-spring-boot-starter</artifactId>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>

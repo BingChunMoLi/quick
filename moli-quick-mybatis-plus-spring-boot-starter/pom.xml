@@ -5,7 +5,7 @@
     <parent>
         <artifactId>moli-quick-spring-boot-starter</artifactId>
         <groupId>com.bingchunmoli</groupId>
-        <version>1.0.9-bate</version>
+        <version>1.0.10-bate</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -20,8 +20,8 @@
         </dependency>
         <dependency>
             <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-boot-starter</artifactId>
-            <version>3.5.3.1</version>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <version>3.5.5</version>
             <optional>true</optional>
             <scope>compile</scope>
         </dependency>

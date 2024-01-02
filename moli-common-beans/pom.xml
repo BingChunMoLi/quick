@@ -5,7 +5,7 @@
     <parent>
         <artifactId>moli-quick-spring-boot-starter</artifactId>
         <groupId>com.bingchunmoli</groupId>
-        <version>1.0.9-bate</version>
+        <version>1.0.10-bate</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -21,14 +21,14 @@
         <dependency>
             <groupId>io.swagger</groupId>
             <artifactId>swagger-annotations</artifactId>
-            <version>1.6.6</version>
+            <version>1.6.12</version>
             <optional>true</optional>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
             <artifactId>swagger-annotations</artifactId>
-            <version>2.2.0</version>
+            <version>2.2.20</version>
             <optional>true</optional>
             <scope>compile</scope>
         </dependency>

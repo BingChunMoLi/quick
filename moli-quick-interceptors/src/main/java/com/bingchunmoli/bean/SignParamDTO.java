@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 
 /**
+ * 签名参数DTO
  * @author moli
  */
 @Data
@@ -13,6 +14,9 @@ public class SignParamDTO {
     private String unsignedStr;
     private String signatureStr;
 
+    /**
+     * 签名参数builder
+     */
     @Data
     @Builder
     public static class SignParamDTOBuilder{
