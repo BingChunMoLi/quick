@@ -6,13 +6,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * SHA256WithRSA签名工具类
- *
- * @author MoLi
+ * @author moli
  */
 @Slf4j
-public class SHA256WithRSASignUtil extends RSAAbstractSignUtil {
-    public SHA256WithRSASignUtil(ObjectMapper om, InterceptorsAutoConfigurationProperties.SignProperties sign, RedisUtil redisUtil) {
+public class MD5WithRSASignUtil extends RSAAbstractSignUtil {
+
+    public MD5WithRSASignUtil(ObjectMapper om, InterceptorsAutoConfigurationProperties.SignProperties sign, RedisUtil redisUtil) {
         super(om, sign, redisUtil);
     }
+
 }
