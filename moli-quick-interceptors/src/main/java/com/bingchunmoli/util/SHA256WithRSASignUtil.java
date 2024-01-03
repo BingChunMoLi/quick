@@ -12,9 +12,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class SHA256WithRSASignUtil extends RSAAbstractSignUtil {
-
     public SHA256WithRSASignUtil(ObjectMapper om, InterceptorsAutoConfigurationProperties.SignProperties sign, RedisUtil redisUtil) {
         super(om, sign, redisUtil);
     }
-
 }
