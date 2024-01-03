@@ -5,6 +5,8 @@ import com.bingchunmoli.filter.CacheFilter;
 import com.bingchunmoli.interceptor.SignInterceptor;
 import com.bingchunmoli.properties.InterceptorsAutoConfigurationProperties;
 import com.bingchunmoli.registrar.InterceptorsRegistrar;
+import com.bingchunmoli.util.MD5SignUtil;
+import com.bingchunmoli.util.MD5WithRSASignUtil;
 import com.bingchunmoli.util.SHA256WithRSASignUtil;
 import com.bingchunmoli.util.SignUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -44,6 +46,8 @@ public class InterceptorsAutoConfiguration {
             String algorithm = propertie.getSign().getAlgorithm();
             return switch (algorithm) {
                 case "SHA256WithRSA" -> new SHA256WithRSASignUtil(om, propertie.getSign(), redisUtil);
+                case "MD5WithRSA" -> new MD5WithRSASignUtil(om, propertie.getSign(), redisUtil);
+                case "MD5" -> new MD5SignUtil(om, propertie.getSign(), redisUtil);
                 default -> throw new IllegalStateException("Unexpected value: " + algorithm);
             };
         }
