@@ -27,6 +27,7 @@
         <module>moli-common-beans</module>
         <module>moli-quick-aop-boot-starter</module>
         <module>moli-quick-interceptors</module>
+        <module>moli-quick-dependencies</module>
     </modules>
 
     <developers>
