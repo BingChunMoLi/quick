@@ -5,7 +5,7 @@
     <parent>
         <artifactId>moli-quick-spring-boot-starter</artifactId>
         <groupId>com.bingchunmoli</groupId>
-        <version>1.0.11-bate</version>
+        <version>1.0.12-bate</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -21,7 +21,7 @@
         <dependency>
             <groupId>io.swagger</groupId>
             <artifactId>swagger-annotations</artifactId>
-            <version>1.6.12</version>
+            <version>1.6.13</version>
             <optional>true</optional>
             <scope>compile</scope>
         </dependency>
@@ -32,5 +32,11 @@
             <optional>true</optional>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 </project>
