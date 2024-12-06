@@ -51,7 +51,7 @@ public class RedisSerializerAutoConfiguration {
             name = "redisSerializer"
     )
     public RedisSerializer<Object> getRedisSerializer() {
-        Jackson2JsonRedisSerializer<Object> serializer = new Jackson2JsonRedisSerializer<>(Object.class);
+
         ObjectMapper om = new ObjectMapper();
         om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
         om.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
@@ -61,8 +61,7 @@ public class RedisSerializerAutoConfiguration {
         om.registerModule(new Jdk8Module())
                 .registerModule(new JavaTimeModule())
                 .registerModule(new ParameterNamesModule());
-        serializer.setObjectMapper(om);
-        return serializer;
+        return new Jackson2JsonRedisSerializer<>(om, Object.class);
     }
 
 }
