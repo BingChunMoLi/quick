@@ -51,7 +51,6 @@ public class RedisSerializerAutoConfiguration {
             name = "redisSerializer"
     )
     public RedisSerializer<Object> getRedisSerializer() {
-
         ObjectMapper om = new ObjectMapper();
         om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
         om.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
