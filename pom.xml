@@ -28,6 +28,7 @@
         <module>moli-quick-aop-boot-starter</module>
         <module>moli-quick-interceptors</module>
         <module>moli-quick-dependencies</module>
+        <module>moli-quick-mybatis-plus-generate</module>
     </modules>
 
     <developers>
@@ -94,6 +95,11 @@
             <dependency>
                 <groupId>com.bingchunmoli</groupId>
                 <artifactId>moli-quick-interceptors</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-mybatis-plus-generate</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>
