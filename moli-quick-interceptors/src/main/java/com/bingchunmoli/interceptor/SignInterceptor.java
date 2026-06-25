@@ -24,6 +24,8 @@ import org.springframework.web.util.ContentCachingRequestWrapper;
 @ConditionalOnClass({SignUtil.class})
 public class SignInterceptor implements HandlerInterceptor {
 
+    private static final int CONTENT_CACHE_LIMIT = 1024 * 1024;
+
     private final InterceptorsAutoConfigurationProperties interceptorsAutoConfigurationProperties;
     private final SignUtil signUtil;
 
@@ -41,7 +43,7 @@ public class SignInterceptor implements HandlerInterceptor {
         }
         //如果请求使用jsonBody方式并且没有包装过可重复读取,则包装可重复读取ServletRequest
         if (request.getContentType() != null && MediaType.APPLICATION_JSON.includes(MediaType.parseMediaType(request.getContentType())) && !(request instanceof ContentCachingRequestWrapper)) {
-            request = new ContentCachingRequestWrapper(request);
+            request = new ContentCachingRequestWrapper(request, CONTENT_CACHE_LIMIT);
         }
         return signUtil.verify(request);
     }

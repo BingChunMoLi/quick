@@ -17,6 +17,8 @@ import java.io.IOException;
  */
 public class CacheFilter extends HttpFilter {
 
+    private static final int CONTENT_CACHE_LIMIT = 1024 * 1024;
+
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         if (request == null) {
@@ -24,7 +26,7 @@ public class CacheFilter extends HttpFilter {
         }
         //如果请求使用jsonBody方式并且没有包装过可重复读取,则包装可重复读取ServletRequest
         if (request.getContentType() != null && request.getContentType().contains("json") && !(request instanceof ContentCachingRequestWrapper)) {
-            request = new ContentCachingRequestWrapper((HttpServletRequest) request);
+            request = new ContentCachingRequestWrapper((HttpServletRequest) request, CONTENT_CACHE_LIMIT);
         }
         super.doFilter(request, response, chain);
     }

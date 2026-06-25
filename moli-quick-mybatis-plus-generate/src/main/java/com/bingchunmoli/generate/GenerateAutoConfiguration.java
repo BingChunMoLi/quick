@@ -12,8 +12,8 @@ import com.bingchunmoli.generate.config.GeneratorConfigProperties;
 import com.bingchunmoli.generate.enums.SwaggerEnums;
 import lombok.*;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceProperties;
 import org.springframework.context.annotation.Configuration;
 
 import javax.sql.DataSource;
