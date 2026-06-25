@@ -18,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -60,11 +61,11 @@ public abstract class AbstractSignUtil implements SignUtil{
         parameterMap.forEach((k, v) -> finalParamMap.put(k, v[0]));
         paramMap.putAll(finalParamMap);
         CustomParamDTO timestamp = signParamBuilder.getTimestamp();
-        if (sign.getTimestamp().isEnable() && timestamp.isHasValue()) {
+        if (timestamp != null && timestamp.isHasValue()) {
             paramMap.put(timestamp.getName(), timestamp.getValue());
         }
         CustomParamDTO nonce = signParamBuilder.getNonce();
-        if (sign.getNonce().isEnable() && nonce.isHasValue()) {
+        if (nonce != null && nonce.isHasValue()) {
             paramMap.put(nonce.getName(), nonce.getValue());
         }
         SignParamDTO signParam = new SignParamDTO();
@@ -128,6 +129,8 @@ public abstract class AbstractSignUtil implements SignUtil{
             if (StringUtils.hasText(redisNonce)) {
                 throw new SignParamIllegalArgumentException(MessageFormatter.format("customParam {} is wrong, repeated nonce", customParamNonce).getMessage());
             }
+            redisUtil.setObject(sign.getNonceRedisPrefix() + nonce, nonce);
+            redisUtil.expire(sign.getNonceRedisPrefix() + nonce, Math.max(1L, sign.getSignValidTime()), TimeUnit.MILLISECONDS);
             nonceParam.setHasValue(true);
             signParamBuilder.nonce(nonceParam);
         }
@@ -147,7 +150,7 @@ public abstract class AbstractSignUtil implements SignUtil{
      * @return 如果customParam不为null并且customParam.name不为空字符串则表示已配置返回true
      */
     private boolean isCustomParamEnable(InterceptorsAutoConfigurationProperties.SignProperties.CustomParam customParam) {
-        return customParam != null && StringUtils.hasText(sign.getNonce().getName());
+        return customParam != null && StringUtils.hasText(customParam.getName());
     }
 
     /**
@@ -169,7 +172,8 @@ public abstract class AbstractSignUtil implements SignUtil{
             case QUERY -> builder.value(request.getParameter(name));
             case BODY -> builder.value(getCustomParamByBody(request, name, cacheBody));
             case ALL -> builder.value(Optional.ofNullable(request.getHeader(name))
-                    .orElseGet(() -> getCustomParamByBody(request, name, cacheBody)));
+                    .orElseGet(() -> Optional.ofNullable(request.getParameter(name))
+                            .orElseGet(() -> getCustomParamByBody(request, name, cacheBody))));
         }
         return builder.build();
     }
@@ -195,6 +199,6 @@ public abstract class AbstractSignUtil implements SignUtil{
                 return request.getParameter(customParamName);
             }
         }
-        return null;
+        return request.getParameter(customParamName);
     }
 }

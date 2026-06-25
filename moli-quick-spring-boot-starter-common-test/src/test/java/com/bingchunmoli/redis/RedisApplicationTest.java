@@ -4,38 +4,41 @@ import com.bingchunmoli.annotation.ExecutionTime;
 import com.bingchunmoli.annotation.Log;
 import com.bingchunmoli.autoconfigure.redis.util.RedisUtil;
 import com.bingchunmoli.bean.ResultVO;
+import com.bingchunmoli.test.TestApplication;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-@SpringBootTest
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@SpringBootTest(classes = TestApplication.class)
 public class RedisApplicationTest {
-    @Autowired
+    @MockBean
     private RedisTemplate<String, Object> redisTemplate;
     @Autowired
     RedisUtil redisUtil;
 
     @Test
-    void contextLoads() throws InterruptedException {
-        List<Integer> list = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
-            list.add(i);
-        }
-        redisTemplate.opsForValue().set("t", list, 30, TimeUnit.SECONDS);
-        System.out.println(redisTemplate.opsForValue().get("t"));
-        redisUtil.setObject("a", list, 30, TimeUnit.SECONDS);
-        Object a = redisUtil.getObject("a");
-        System.out.println(a);
-        Thread.sleep(10000);
-        redisUtil.setObject("test:object", ResultVO.ok("new Data"));
+    void contextLoads() {
+        ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
+        ResultVO<String> result = ResultVO.ok("new Data");
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get("test:object")).thenReturn(result);
+
+        redisUtil.setObject("test:object", result, 30, TimeUnit.SECONDS);
         ResultVO<String> object = redisUtil.getObject("test:object");
-        System.out.println(object);
+
+        assertThat(object).isEqualTo(result);
+        verify(valueOperations).set("test:object", result, 30, TimeUnit.SECONDS);
     }
 
 
@@ -60,4 +63,3 @@ public class RedisApplicationTest {
         System.out.println("测试");
     }
 }
-
