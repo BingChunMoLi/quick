@@ -8,10 +8,14 @@ import com.bingchunmoli.security.jwt.RedisJwtSessionStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class JwtSessionStoreFactoryTest {
 
@@ -46,18 +50,25 @@ class JwtSessionStoreFactoryTest {
     }
 
     @Test
+    @SuppressWarnings({"rawtypes", "unchecked"})
     void shouldPreferRedisUtilWhenBothRedisUtilAndRedisTemplateExist() {
         JwtTokenProperties properties = new JwtTokenProperties();
-        properties.setSessionStoreClassName(CapturingRedisAccessStore.class.getName());
+        properties.setSessionStoreClassName(RedisJwtSessionStore.class.getName());
         DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
-        RedisTemplate redisTemplate = mock(RedisTemplate.class);
-        RedisUtil redisUtil = new RedisUtil(redisTemplate);
-        beanFactory.registerSingleton("redisTemplate", redisTemplate);
+        RedisTemplate redisUtilTemplate = mock(RedisTemplate.class);
+        RedisTemplate fallbackTemplate = mock(RedisTemplate.class);
+        ValueOperations valueOperations = mock(ValueOperations.class);
+        when(redisUtilTemplate.opsForValue()).thenReturn(valueOperations);
+        RedisUtil redisUtil = new RedisUtil(redisUtilTemplate);
+        beanFactory.registerSingleton("redisTemplate", fallbackTemplate);
         beanFactory.registerSingleton("redisUtil", redisUtil);
 
-        new JwtSessionStoreFactory(beanFactory).create(properties);
+        JwtSessionStore store = new JwtSessionStoreFactory(beanFactory).create(properties);
 
-        assertThat(CapturingRedisAccessStore.redisAccess).isSameAs(redisUtil);
+        store.isTokenBlacklisted("token-1");
+
+        verify(redisUtilTemplate).opsForValue();
+        verify(fallbackTemplate, never()).opsForValue();
     }
 
     @Test
@@ -71,14 +82,5 @@ class JwtSessionStoreFactoryTest {
     }
 
     public static class CustomStore extends InMemoryJwtSessionStore {
-    }
-
-    public static class CapturingRedisAccessStore extends InMemoryJwtSessionStore {
-
-        static Object redisAccess;
-
-        public CapturingRedisAccessStore(Object redisAccess, JwtTokenProperties properties) {
-            CapturingRedisAccessStore.redisAccess = redisAccess;
-        }
     }
 }

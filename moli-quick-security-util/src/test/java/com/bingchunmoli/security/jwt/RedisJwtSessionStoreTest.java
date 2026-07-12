@@ -1,6 +1,5 @@
 package com.bingchunmoli.security.jwt;
 
-import com.bingchunmoli.autoconfigure.redis.util.RedisUtil;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SetOperations;
@@ -16,17 +15,16 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class RedisJwtSessionStoreTest {
 
     @Test
-    void shouldStoreSessionAndBlacklistTokenWithRedisUtil() {
+    void shouldStoreSessionAndBlacklistTokenWithRedisTemplate() {
         Map<String, Object> values = new ConcurrentHashMap<>();
         Map<String, Set<Object>> sets = new ConcurrentHashMap<>();
-        RedisJwtSessionStore store = new RedisJwtSessionStore(redisUtil(values, sets), properties());
+        RedisJwtSessionStore store = new RedisJwtSessionStore(redisTemplate(values, sets), properties());
         JwtSession session = session();
 
         store.save(session);
@@ -43,7 +41,7 @@ class RedisJwtSessionStoreTest {
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private RedisUtil redisUtil(Map<String, Object> values, Map<String, Set<Object>> sets) {
+    private RedisTemplate<String, Object> redisTemplate(Map<String, Object> values, Map<String, Set<Object>> sets) {
         RedisTemplate redisTemplate = mock(RedisTemplate.class);
         ValueOperations valueOperations = mock(ValueOperations.class);
         SetOperations setOperations = mock(SetOperations.class);
@@ -61,7 +59,7 @@ class RedisJwtSessionStoreTest {
             return 1L;
         });
         when(setOperations.members(any())).thenAnswer(invocation -> sets.get(invocation.getArgument(0)));
-        return new RedisUtil(redisTemplate);
+        return redisTemplate;
     }
 
     private JwtTokenProperties properties() {

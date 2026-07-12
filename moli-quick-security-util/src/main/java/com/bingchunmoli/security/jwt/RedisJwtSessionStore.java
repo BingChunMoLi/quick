@@ -2,7 +2,6 @@ package com.bingchunmoli.security.jwt;
 
 import org.springframework.data.redis.core.RedisTemplate;
 
-import java.lang.reflect.Field;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
@@ -11,7 +10,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Redis backed JWT session store. It uses the project's RedisUtil and can be selected by class name.
+ * Redis backed JWT session store.
  *
  * @author MoLi
  */
@@ -23,8 +22,8 @@ public class RedisJwtSessionStore implements JwtSessionStore {
 
     private final String keyPrefix;
 
-    public RedisJwtSessionStore(Object redisAccess, JwtTokenProperties properties) {
-        this.redisTemplate = resolveRedisTemplate(redisAccess);
+    public RedisJwtSessionStore(RedisTemplate<String, Object> redisTemplate, JwtTokenProperties properties) {
+        this.redisTemplate = redisTemplate;
         this.properties = properties;
         this.keyPrefix = normalizePrefix(properties.getRedisKeyPrefix());
     }
@@ -127,25 +126,5 @@ public class RedisJwtSessionStore implements JwtSessionStore {
 
     private String normalizePrefix(String prefix) {
         return prefix == null || prefix.isBlank() ? "moli:security:jwt" : prefix;
-    }
-
-    @SuppressWarnings("unchecked")
-    private RedisTemplate<String, Object> resolveRedisTemplate(Object redisAccess) {
-        if (redisAccess instanceof RedisTemplate<?, ?> template) {
-            return (RedisTemplate<String, Object>) template;
-        }
-        if (redisAccess == null) {
-            throw new IllegalArgumentException("Redis access object must not be null");
-        }
-        try {
-            Field redisTemplateField = redisAccess.getClass().getField("redisTemplate");
-            Object value = redisTemplateField.get(redisAccess);
-            if (value instanceof RedisTemplate<?, ?> template) {
-                return (RedisTemplate<String, Object>) template;
-            }
-        } catch (ReflectiveOperationException ex) {
-            throw new IllegalArgumentException("Redis access object must be RedisTemplate or expose public redisTemplate field", ex);
-        }
-        throw new IllegalArgumentException("Redis access object must be RedisTemplate or expose public redisTemplate field");
     }
 }

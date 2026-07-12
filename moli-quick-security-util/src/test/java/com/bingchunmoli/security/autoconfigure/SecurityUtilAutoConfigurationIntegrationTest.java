@@ -2,7 +2,6 @@ package com.bingchunmoli.security.autoconfigure;
 
 import com.bingchunmoli.security.context.SecurityUserContext;
 import com.bingchunmoli.security.logout.SecurityLogoutService;
-import com.bingchunmoli.security.web.QuickSecurityAuthController;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -59,7 +58,6 @@ class SecurityUtilAutoConfigurationIntegrationTest {
     void shouldAutoConfigureDefaultSecurityIntegrationInWebApplication() {
         webContextRunner.run(context -> assertThat(context)
                 .hasSingleBean(SecurityFilterChain.class)
-                .hasSingleBean(QuickSecurityAuthController.class)
                 .hasSingleBean(SecurityLogoutService.class)
                 .hasSingleBean(SessionRegistry.class));
     }

@@ -8,7 +8,6 @@ import com.bingchunmoli.security.jwt.JwtTokenProperties;
 import com.bingchunmoli.security.jwt.JwtTokenResolver;
 import com.bingchunmoli.security.jwt.JwtTokenService;
 import com.bingchunmoli.security.logout.SecurityLogoutService;
-import com.bingchunmoli.security.web.QuickSecurityAuthController;
 import jakarta.servlet.http.HttpSessionEvent;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -33,7 +32,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
@@ -152,30 +150,12 @@ public class SecurityUtilAutoConfiguration {
             http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         }
         http.authorizeHttpRequests(authorize -> {
-            for (String pattern : properties.permitAllPatterns()) {
+            for (String pattern : properties.getPermitAll()) {
                 authorize.requestMatchers(pattern).permitAll();
-            }
-            if (properties.getForceLogoutAuthority() != null && !properties.getForceLogoutAuthority().isBlank()) {
-                authorize.requestMatchers(properties.forceLogoutPathPattern())
-                        .hasAuthority(properties.getForceLogoutAuthority());
             }
             authorize.anyRequest().authenticated();
         });
         return http.build();
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnBean({AuthenticationManager.class, JwtTokenService.class})
-    @ConditionalOnClass(RestController.class)
-    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-    @ConditionalOnProperty(prefix = "moli.security", name = "auth-controller-enabled", havingValue = "true",
-            matchIfMissing = true)
-    public QuickSecurityAuthController quickSecurityAuthController(AuthenticationManager authenticationManager,
-                                                                  SessionRegistry sessionRegistry,
-                                                                  SecurityLogoutService logoutService,
-                                                                  JwtTokenService jwtTokenService) {
-        return new QuickSecurityAuthController(authenticationManager, sessionRegistry, logoutService, jwtTokenService);
     }
 
     @Bean

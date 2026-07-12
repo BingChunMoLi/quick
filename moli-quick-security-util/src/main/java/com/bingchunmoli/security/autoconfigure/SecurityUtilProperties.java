@@ -19,8 +19,6 @@ public class SecurityUtilProperties {
 
     private boolean defaultFilterChainEnabled = true;
 
-    private boolean authControllerEnabled = true;
-
     private boolean csrfEnabled = false;
 
     private boolean formLoginEnabled = false;
@@ -34,10 +32,6 @@ public class SecurityUtilProperties {
     private int filterOrder = Ordered.LOWEST_PRECEDENCE - 100;
 
     private int expiredStatus = 401;
-
-    private String authBasePath = "/security";
-
-    private String forceLogoutAuthority = "ROLE_ADMIN";
 
     private List<String> permitAll = new ArrayList<>(List.of("/error"));
 
@@ -55,14 +49,6 @@ public class SecurityUtilProperties {
 
     public void setDefaultFilterChainEnabled(boolean defaultFilterChainEnabled) {
         this.defaultFilterChainEnabled = defaultFilterChainEnabled;
-    }
-
-    public boolean isAuthControllerEnabled() {
-        return authControllerEnabled;
-    }
-
-    public void setAuthControllerEnabled(boolean authControllerEnabled) {
-        this.authControllerEnabled = authControllerEnabled;
     }
 
     public boolean isCsrfEnabled() {
@@ -121,59 +107,11 @@ public class SecurityUtilProperties {
         this.expiredStatus = expiredStatus;
     }
 
-    public String getAuthBasePath() {
-        return authBasePath;
-    }
-
-    public void setAuthBasePath(String authBasePath) {
-        this.authBasePath = normalizeBasePath(authBasePath);
-    }
-
     public List<String> getPermitAll() {
         return permitAll;
     }
 
     public void setPermitAll(List<String> permitAll) {
         this.permitAll = permitAll == null ? new ArrayList<>() : permitAll;
-    }
-
-    public String loginPath() {
-        return authBasePath + "/login";
-    }
-
-    public String logoutPath() {
-        return authBasePath + "/logout";
-    }
-
-    public String currentUserPath() {
-        return authBasePath + "/me";
-    }
-
-    public String forceLogoutPathPattern() {
-        return authBasePath + "/force-logout/**";
-    }
-
-    public String getForceLogoutAuthority() {
-        return forceLogoutAuthority;
-    }
-
-    public void setForceLogoutAuthority(String forceLogoutAuthority) {
-        this.forceLogoutAuthority = forceLogoutAuthority;
-    }
-
-    public List<String> permitAllPatterns() {
-        List<String> patterns = new ArrayList<>(permitAll);
-        patterns.add(loginPath());
-        return patterns;
-    }
-
-    private String normalizeBasePath(String basePath) {
-        if (basePath == null || basePath.isBlank()) {
-            return "/security";
-        }
-        String normalizedPath = basePath.startsWith("/") ? basePath : "/" + basePath;
-        return normalizedPath.endsWith("/") && normalizedPath.length() > 1
-                ? normalizedPath.substring(0, normalizedPath.length() - 1)
-                : normalizedPath;
     }
 }
