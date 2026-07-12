@@ -28,6 +28,7 @@
         <module>moli-common-beans</module>
         <module>moli-quick-aop-boot-starter</module>
         <module>moli-quick-interceptors</module>
+        <module>moli-quick-security-util</module>
         <module>moli-quick-dependencies</module>
         <module>moli-quick-mybatis-plus-generate</module>
     </modules>
@@ -96,6 +97,11 @@
             <dependency>
                 <groupId>com.bingchunmoli</groupId>
                 <artifactId>moli-quick-interceptors</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-security-util</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
