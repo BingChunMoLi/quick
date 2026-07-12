@@ -1,11 +1,11 @@
 package com.bingchunmoli.autoconfigure.redis.config;
 
 import com.bingchunmoli.autoconfigure.redis.util.RedisUtil;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.RedisTemplate;
 
 /**
@@ -13,10 +13,9 @@ import org.springframework.data.redis.core.RedisTemplate;
  *
  * @author MoLi
  */
-@Configuration
-@ConditionalOnMissingBean(value = {RedisUtilAutoConfiguration.class, RedisUtil.class})
-@ConditionalOnClass(RedisSerializerAutoConfiguration.class)
-@ConditionalOnBean(RedisSerializerAutoConfiguration.class)
+@AutoConfiguration(after = RedisSerializerAutoConfiguration.class)
+@ConditionalOnClass(RedisTemplate.class)
+@ConditionalOnBean(RedisTemplate.class)
 public class RedisUtilAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(RedisUtil.class)

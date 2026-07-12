@@ -15,6 +15,8 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 /**
  * 自动配置拦截器
@@ -22,6 +24,8 @@ import org.springframework.context.annotation.Bean;
  * @author MoLi
  */
 @RequiredArgsConstructor
+@AutoConfiguration
+@Import(InterceptorsAutoConfiguration.SignAutoConfiguration.class)
 @EnableConfigurationProperties(InterceptorsAutoConfigurationProperties.class)
 public class InterceptorsAutoConfiguration {
 
@@ -30,7 +34,7 @@ public class InterceptorsAutoConfiguration {
      * @author MoLi
      */
     @RequiredArgsConstructor
-    @AutoConfiguration(after = {ObjectMapper.class, RedisUtil.class, InterceptorsAutoConfigurationProperties.class})
+    @Configuration
     @ConditionalOnProperty(prefix = "moli.interceptor.sign.sign", value = "enable", havingValue = "true")
     static class SignAutoConfiguration {
 
