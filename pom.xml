@@ -31,6 +31,7 @@
         <module>moli-quick-security-util</module>
         <module>moli-quick-dependencies</module>
         <module>moli-quick-mybatis-plus-generate</module>
+        <module>moli-quick-object-storage</module>
     </modules>
 
     <developers>
@@ -107,6 +108,36 @@
             <dependency>
                 <groupId>com.bingchunmoli</groupId>
                 <artifactId>moli-quick-mybatis-plus-generate</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-object-storage-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-object-storage-spring-boot-autoconfigure</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-object-storage-oss</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-object-storage-obs</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-object-storage-cos</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-object-storage-s3</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>
