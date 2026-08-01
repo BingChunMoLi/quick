@@ -1,0 +1,2 @@
+com.bingchunmoli.idempotency.autoconfigure.RedisIdempotencyAutoConfiguration
+com.bingchunmoli.idempotency.autoconfigure.IdempotencyAutoConfiguration

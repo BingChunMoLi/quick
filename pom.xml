@@ -32,6 +32,7 @@
         <module>moli-quick-dependencies</module>
         <module>moli-quick-mybatis-plus-generate</module>
         <module>moli-quick-object-storage</module>
+        <module>moli-quick-idempotency-spring-boot-starter</module>
     </modules>
 
     <developers>
@@ -138,6 +139,11 @@
             <dependency>
                 <groupId>com.bingchunmoli</groupId>
                 <artifactId>moli-quick-object-storage-s3</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-idempotency-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

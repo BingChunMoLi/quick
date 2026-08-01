@@ -79,6 +79,11 @@
                 <artifactId>moli-quick-object-storage-s3</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-idempotency-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 </project>
