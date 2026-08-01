@@ -1,0 +1,4 @@
+com.bingchunmoli.web.autoconfigure.RequestIdAutoConfiguration
+com.bingchunmoli.web.autoconfigure.WebExceptionHandlerAutoConfiguration
+com.bingchunmoli.web.autoconfigure.IdempotencyWebExceptionAutoConfiguration
+com.bingchunmoli.web.autoconfigure.RateLimitWebExceptionAutoConfiguration

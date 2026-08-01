@@ -34,6 +34,7 @@
         <module>moli-quick-object-storage</module>
         <module>moli-quick-idempotency-spring-boot-starter</module>
         <module>moli-quick-rate-limit-spring-boot-starter</module>
+        <module>moli-quick-web-spring-boot-starter</module>
     </modules>
 
     <developers>
@@ -150,6 +151,11 @@
             <dependency>
                 <groupId>com.bingchunmoli</groupId>
                 <artifactId>moli-quick-rate-limit-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-web-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

@@ -17,6 +17,7 @@ moli-common-beans：common ResultVO and ProfileEnum
 | moli-quick-object-storage-*                 | 1.0.13-bate | OSS、OBS、COS、S3 单独或多 Provider 对象存储 | ObjectStorageClient、ObjectStorageClientRegistry 及所选厂商 Client                                                           |
 | moli-quick-idempotency-spring-boot-starter  | 1.0.13-bate | 注解式接口幂等，支持内存、Redis 和自定义存储 | IdempotencyAspect、IdempotencyStore、IdempotencyKeyResolver                                                                  |
 | moli-quick-rate-limit-spring-boot-starter   | 1.0.13-bate | 注解式方法限流，支持内存、Redis 和自定义存储 | RateLimitAspect、RateLimitStore、RateLimitKeyResolver                                                                        |
+| moli-quick-web-spring-boot-starter          | 1.0.13-bate | 统一异常响应、参数校验、请求 ID 与 MDC       | GlobalWebExceptionHandler、RequestIdGenerator、RequestIdFilter                                                               |
 
 3. 快速开始(添加如下依赖开箱即用)
 ## 父POM版本管理
@@ -115,3 +116,16 @@ moli-common-beans：common ResultVO and ProfileEnum
 
 提供 `@RateLimit` 固定窗口方法限流，支持内存、Redis 和自定义 `RateLimitStore`，详见
 [限流 Starter 文档](moli-quick-rate-limit-spring-boot-starter/README.md)。
+
+## moli-quick-web-spring-boot-starter
+
+```xml
+<dependency>
+    <artifactId>moli-quick-web-spring-boot-starter</artifactId>
+    <groupId>com.bingchunmoli</groupId>
+    <version>LATEST</version>
+</dependency>
+```
+
+提供统一错误响应、参数校验处理、请求 ID/MDC，并自动适配幂等冲突和限流异常，详见
+[Web Starter 文档](moli-quick-web-spring-boot-starter/README.md)。
