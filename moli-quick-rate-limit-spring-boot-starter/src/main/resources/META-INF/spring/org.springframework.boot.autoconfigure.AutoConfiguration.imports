@@ -1,0 +1,2 @@
+com.bingchunmoli.ratelimit.autoconfigure.RedisRateLimitAutoConfiguration
+com.bingchunmoli.ratelimit.autoconfigure.RateLimitAutoConfiguration
