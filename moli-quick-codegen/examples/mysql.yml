@@ -1,0 +1,23 @@
+schemaVersion: 1
+datasource:
+  url: jdbc:mysql://127.0.0.1:3306/demo?useInformationSchema=true
+  username: root
+  password: ${DB_PASSWORD}
+orm: mybatis
+basePackage: com.example.demo
+author: moli
+tablePrefix: sys_
+tables:
+  - name: sys_user
+    className: User
+    columns:
+      username:
+        queryType: LIKE
+      created_at:
+        update: false
+artifacts: [entity, controller, service, serviceImpl, mapper, xml]
+output:
+  directory: generated
+  javaDirectory: src/main/java
+  xmlDirectory: src/main/resources/mapper
+  overwrite: false

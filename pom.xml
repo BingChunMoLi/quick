@@ -31,6 +31,7 @@
         <module>moli-quick-security-util</module>
         <module>moli-quick-dependencies</module>
         <module>moli-quick-mybatis-plus-generate</module>
+        <module>moli-quick-codegen</module>
         <module>moli-quick-object-storage</module>
         <module>moli-quick-idempotency-spring-boot-starter</module>
         <module>moli-quick-rate-limit-spring-boot-starter</module>
@@ -156,6 +157,31 @@
             <dependency>
                 <groupId>com.bingchunmoli</groupId>
                 <artifactId>moli-quick-web-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-codegen-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-codegen-cli</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-codegen-maven-plugin</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-codegen-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-codegen-app</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

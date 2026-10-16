@@ -1,0 +1,31 @@
+schemaVersion: 1
+datasource:
+  url: jdbc:postgresql://127.0.0.1:5432/demo
+  username: postgres
+  password: ${DB_PASSWORD}
+  schema: public
+orm: mybatis-plus
+basePackage: com.example.demo
+author: moli
+tables:
+  - name: customer
+    columns:
+      name:
+        queryType: LIKE
+variables:
+  module: customer
+templates:
+  dto:
+    outputPath: src/main/java/${packagePath}/dto/${className}Dto.java
+    content: |
+      package ${basePackage}.dto;
+
+      /** ${variables.module} DTO */
+      public class ${className}Dto {
+      <#list columns as column>
+          private ${column.javaType} ${column.property};
+      </#list>
+      }
+output:
+  directory: generated
+  overwrite: false

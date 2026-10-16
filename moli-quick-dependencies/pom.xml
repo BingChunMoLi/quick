@@ -91,7 +91,32 @@
             </dependency>
             <dependency>
                 <groupId>com.bingchunmoli</groupId>
-                <artifactId>moli-quick-web·-spring-boot-starter</artifactId>
+                <artifactId>moli-quick-web-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-codegen-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-codegen-cli</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-codegen-maven-plugin</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-codegen-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bingchunmoli</groupId>
+                <artifactId>moli-quick-codegen-app</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

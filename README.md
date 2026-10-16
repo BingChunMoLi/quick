@@ -20,6 +20,11 @@ moli-common-beans：common ResultVO and ProfileEnum
 | moli-quick-web-spring-boot-starter          | 1.0.13-bate | 统一异常响应、参数校验、请求 ID 与 MDC       | GlobalWebExceptionHandler、RequestIdGenerator、RequestIdFilter                                                               |
 
 3. 快速开始(添加如下依赖开箱即用)
+
+## 统一代码生成器
+
+新增 `moli-quick-codegen`：支持 MySQL/PostgreSQL、MyBatis/MyBatis-Plus、独立 UI、可嵌入 Starter、CLI 和 Maven 插件，提供字段配置、自定义模板、预览与导出。详见 [代码生成器文档](moli-quick-codegen/README.md)。
+
 ## 父POM版本管理
 ```xml
 <dependencyManagement>
