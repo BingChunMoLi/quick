@@ -26,7 +26,7 @@
         <dependency>
             <groupId>com.aliyun.oss</groupId>
             <artifactId>aliyun-sdk-oss</artifactId>
-            <version>3.18.4</version>
+            <version>3.18.5</version>
         </dependency>
         <!-- Required by OSS SDK V1 on Java 9+. Keep the javax-based JAXB line used by the SDK. -->
         <dependency>
