@@ -15,6 +15,8 @@ public class SignParamDTO {
     private String unsignedStr;
     //客户端请求的签名字符串实际值
     private String signatureStr;
+    // Extracted during canonicalization; claimed only after the signature is valid.
+    private CustomParamDTO nonce;
 
     /**
      * 签名参数builder

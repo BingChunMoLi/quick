@@ -1,5 +1,16 @@
 ## 快速开始:
 
+JSON 验签由 `CacheFilter` 在进入 MVC 前缓存请求体，验签和 Controller 可以分别完整读取，支持
+`application/json` 和 `application/*+json`。默认最多缓存 1 MiB，超限返回 HTTP 413；手动注册
+`SignInterceptor` 时也必须在 MVC 前注册 `CacheFilter`，并在其他读取请求体的过滤器之前执行。
+
+启用 nonce 后，只有签名验证成功才使用 Redis 带 TTL 的 `SET NX` 原子抢占；同一 nonce
+在有效期内只允许一个请求通过。调用 `getSignParam()` 只提取参数，不消耗 nonce；错误签名
+不会占用 nonce，Redis 抢占失败也不会放行业务请求。
+
+自定义签名算法继承 `AbstractSignUtil` 并覆盖 `verify()` 时，应在完成签名计算后调用
+`completeVerification(parameters, signatureValid)`，复用同样的 nonce 抢占逻辑。
+
 1. 添加依赖
 ```xml
 <dependency>

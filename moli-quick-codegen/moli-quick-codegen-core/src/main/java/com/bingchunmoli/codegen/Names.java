@@ -3,6 +3,9 @@ package com.bingchunmoli.codegen;
 import javax.lang.model.SourceVersion;
 
 final class Names {
+    // OGNL tokens that are otherwise valid Java property names.
+    private static final java.util.Set<String> OGNL_RESERVED_PROPERTIES = java.util.Set.of(
+            "or", "and", "bor", "xor", "band", "eq", "neq", "lt", "gt", "lte", "gte", "in", "not", "shl", "shr", "ushr", "$");
     private Names() { }
     static String camel(String name, boolean upper) {
         StringBuilder result = new StringBuilder();
@@ -25,6 +28,11 @@ final class Names {
         if (name == null || !name.matches("[A-Za-z_$][\\w$]*(\\.[A-Za-z_$][\\w$]*)*(\\[\\])?") || !primitiveArray && !SourceVersion.isName(component))
             throw new CodegenException("Invalid Java type at " + location);
         return name;
+    }
+    static void ognlProperty(String property, String location) {
+        if (OGNL_RESERVED_PROPERTIES.contains(property))
+            throw new CodegenException("OGNL reserved property '" + property + "' at " + location
+                    + "; configure a non-reserved column property override");
     }
     static String comment(String text) {
         return text == null ? "" : text.replace("*/", "* /").replace("\\u", "\\ u").replace('\r', ' ').replace('\n', ' ');

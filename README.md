@@ -25,6 +25,12 @@ moli-common-beans：common ResultVO and ProfileEnum
 
 新增 `moli-quick-codegen`：支持 MySQL/PostgreSQL、MyBatis/MyBatis-Plus、独立 UI、可嵌入 Starter、CLI 和 Maven 插件，提供字段配置、自定义模板、预览与导出。详见 [代码生成器文档](moli-quick-codegen/README.md)。
 
+## JWT 默认密钥提示
+
+启用 Security 工具模块的 JWT 自动配置时，如果 `moli.security.jwt.secret` 仍为内置默认值，
+Spring Boot 启动会记录 WARN 日志，提示生产环境必须更换强密钥。日志不输出密钥内容；
+配置自定义密钥或关闭 JWT 后不输出此提示。
+
 ## 父POM版本管理
 ```xml
 <dependencyManagement>

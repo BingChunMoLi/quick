@@ -2,6 +2,9 @@ package com.bingchunmoli.interceptor;
 
 
 import com.bingchunmoli.properties.InterceptorsAutoConfigurationProperties;
+import com.bingchunmoli.exception.SignConfigException;
+import com.bingchunmoli.filter.CacheFilter;
+import com.bingchunmoli.filter.RepeatableBodyRequestWrapper;
 import com.bingchunmoli.util.SignUtil;
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,10 +12,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.http.MediaType;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.util.ContentCachingRequestWrapper;
+import org.springframework.web.util.WebUtils;
 
 /**
  * 签名拦截器
@@ -23,8 +25,6 @@ import org.springframework.web.util.ContentCachingRequestWrapper;
 @RequiredArgsConstructor
 @ConditionalOnClass({SignUtil.class})
 public class SignInterceptor implements HandlerInterceptor {
-
-    private static final int CONTENT_CACHE_LIMIT = 1024 * 1024;
 
     private final InterceptorsAutoConfigurationProperties interceptorsAutoConfigurationProperties;
     private final SignUtil signUtil;
@@ -41,10 +41,9 @@ public class SignInterceptor implements HandlerInterceptor {
         if (sign.getIgnorePathList().contains(request.getRequestURI())) {
             return true;
         }
-        //如果请求使用jsonBody方式并且没有包装过可重复读取,则包装可重复读取ServletRequest
-        if (request.getContentType() != null && MediaType.APPLICATION_JSON.includes(MediaType.parseMediaType(request.getContentType())) && !(request instanceof ContentCachingRequestWrapper)) {
-            request = new ContentCachingRequestWrapper(request, CONTENT_CACHE_LIMIT);
-        }
+        // An interceptor cannot replace the request passed to MVC; the filter must do the wrapping.
+        if (CacheFilter.isJsonRequest(request) && WebUtils.getNativeRequest(request, RepeatableBodyRequestWrapper.class) == null)
+            throw new SignConfigException("JSON signature verification requires CacheFilter before MVC");
         return signUtil.verify(request);
     }
 

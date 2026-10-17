@@ -7,12 +7,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 
-import java.util.concurrent.TimeUnit;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 class AbstractSignUtilTest {
 
@@ -52,7 +49,7 @@ class AbstractSignUtilTest {
     }
 
     @Test
-    void shouldCacheNonceAfterSuccessfulNonceValidation() {
+    void shouldExtractNonceWithoutClaimingItDuringCanonicalization() {
         InterceptorsAutoConfigurationProperties.SignProperties properties = signProperties();
         properties.setNonce(new InterceptorsAutoConfigurationProperties.SignProperties.CustomParam(
                 true,
@@ -60,16 +57,14 @@ class AbstractSignUtilTest {
                 InterceptorsAutoConfigurationProperties.SignProperties.ParameterPosition.QUERY
         ));
         RedisUtil redisUtil = mock(RedisUtil.class);
-        when(redisUtil.getObject("moli:sign:nonce:abc123")).thenReturn(null);
         MD5SignUtil signUtil = new MD5SignUtil(objectMapper, properties, redisUtil);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/demo");
         request.addParameter("nonce", "abc123");
         request.addParameter("sign", "abc");
 
-        signUtil.getSignParam(request);
-
-        verify(redisUtil).setObject("moli:sign:nonce:abc123", "abc123");
-        verify(redisUtil).expire("moli:sign:nonce:abc123", 2_000L, TimeUnit.MILLISECONDS);
+        var parameters = signUtil.getSignParam(request);
+        assertThat(parameters.getNonce().getValue()).isEqualTo("abc123");
+        verifyNoInteractions(redisUtil);
     }
 
     private InterceptorsAutoConfigurationProperties.SignProperties signProperties() {

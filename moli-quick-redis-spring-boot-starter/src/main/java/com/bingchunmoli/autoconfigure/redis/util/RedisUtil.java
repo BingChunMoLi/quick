@@ -38,6 +38,11 @@ public class RedisUtil {
         redisTemplate.opsForValue().set(key, value, timeout, timeUnit);
     }
 
+    /** Atomically create a value with its TTL, only when the key does not exist. */
+    public <T> boolean setObjectIfAbsent(final String key, final T value, final long timeout, final TimeUnit timeUnit) {
+        return Boolean.TRUE.equals(redisTemplate.opsForValue().setIfAbsent(key, value, timeout, timeUnit));
+    }
+
     /**
      * 设置有效时间
      *

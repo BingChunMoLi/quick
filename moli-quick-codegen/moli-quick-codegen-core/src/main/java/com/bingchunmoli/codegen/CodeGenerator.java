@@ -100,6 +100,7 @@ public class CodeGenerator {
             String location = table.name() + "." + column.name();
             GenerationConfig.Column override = selected.columns.getOrDefault(column.name(), new GenerationConfig.Column());
             String property = override.property == null ? Names.camel(column.name(), false) : Names.identifier(override.property, location);
+            if (config.orm.equals("mybatis") && config.artifacts.contains("xml")) Names.ognlProperty(property, location);
             if (!properties.add(property)) throw new CodegenException("Duplicate property at " + location);
             if (!accessors.add(Names.beanSuffix(property))) throw new CodegenException("Duplicate JavaBean accessor at " + location);
             if (Names.beanSuffix(property).equals("Class")) throw new CodegenException("Property conflicts with Object.getClass at " + location);

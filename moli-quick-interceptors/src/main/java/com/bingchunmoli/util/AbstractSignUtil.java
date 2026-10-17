@@ -5,6 +5,7 @@ import com.bingchunmoli.bean.CustomParamDTO;
 import com.bingchunmoli.bean.SignParamDTO;
 import com.bingchunmoli.exception.SignConfigException;
 import com.bingchunmoli.exception.SignParamIllegalArgumentException;
+import com.bingchunmoli.filter.CacheFilter;
 import com.bingchunmoli.properties.InterceptorsAutoConfigurationProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.helpers.MessageFormatter;
-import org.springframework.http.MediaType;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
@@ -46,8 +46,7 @@ public abstract class AbstractSignUtil implements SignUtil{
     @SneakyThrows
     public SignParamDTO getSignParam(HttpServletRequest request) {
         SortedMap<String, String> paramMap = new TreeMap<>();
-        String contentType = request.getContentType();
-        if (contentType != null && MediaType.parseMediaType(contentType).includes(MediaType.APPLICATION_JSON)) {
+        if (CacheFilter.isJsonRequest(request)) {
             String bodyStr = request.getReader().lines().collect(Collectors.joining());
             paramMap.put(BODY_KEY, bodyStr);
         }
@@ -70,6 +69,7 @@ public abstract class AbstractSignUtil implements SignUtil{
         }
         SignParamDTO signParam = new SignParamDTO();
         signParam.setSignatureStr(signParamBuilder.getSign().getValue());
+        signParam.setNonce(nonce);
         if (!InterceptorsAutoConfigurationProperties.SignProperties.ParameterPosition.HEAD.equals(sign.getSign().getParameterPosition())) {
             paramMap.remove(signParamBuilder.getSign().getName());
         }
@@ -86,12 +86,24 @@ public abstract class AbstractSignUtil implements SignUtil{
         return signParam.setUnsignedStr(stringBuilder.toString());
     }
 
+    /** Claim the nonce with its expiration only after cryptographic verification succeeds. */
+    protected boolean completeVerification(SignParamDTO parameters, boolean signatureValid) {
+        if (!signatureValid) return false;
+        CustomParamDTO nonce = parameters.getNonce();
+        if (nonce != null && nonce.isHasValue()) {
+            if (redisUtil == null) throw new SignConfigException("Nonce verification requires RedisUtil");
+            boolean acquired = redisUtil.setObjectIfAbsent(sign.getNonceRedisPrefix() + nonce.getValue(), nonce.getValue(),
+                    Math.max(1L, sign.getSignValidTime()), TimeUnit.MILLISECONDS);
+            if (!acquired) throw new SignParamIllegalArgumentException("customParam " + nonce.getName() + " is wrong, repeated nonce");
+        }
+        return true;
+    }
 
     /**
      * 验证自定义参数并提取
      * sign: 必须配置并参数存在
      * timestamp: 是否配置并是否过期
-     * nonce: 是否配置并是否已使用(需要redis)
+     * nonce: 是否配置并提取；验签成功后再通过 Redis 原子抢占
      *
      * @param request   请求
      * @param cacheBody 缓存的body
@@ -122,15 +134,10 @@ public abstract class AbstractSignUtil implements SignUtil{
         InterceptorsAutoConfigurationProperties.SignProperties.CustomParam customParamNonce = sign.getNonce();
         if (isCustomParamEnable(customParamNonce) && customParamNonce.isEnable()) {
             CustomParamDTO nonceParam = getCustomParam(customParamNonce, request, cacheBody);
-            String nonce = Optional.ofNullable(nonceParam)
+            Optional.ofNullable(nonceParam)
                     .map(CustomParamDTO::getValue)
+                    .filter(StringUtils::hasText)
                     .orElseThrow(() -> new SignParamIllegalArgumentException(MessageFormatter.format("customParam {} is wrong, miss nonce requestParam", customParamNonce).getMessage()));
-            String redisNonce = redisUtil.getObject(sign.getNonceRedisPrefix() + nonce);
-            if (StringUtils.hasText(redisNonce)) {
-                throw new SignParamIllegalArgumentException(MessageFormatter.format("customParam {} is wrong, repeated nonce", customParamNonce).getMessage());
-            }
-            redisUtil.setObject(sign.getNonceRedisPrefix() + nonce, nonce);
-            redisUtil.expire(sign.getNonceRedisPrefix() + nonce, Math.max(1L, sign.getSignValidTime()), TimeUnit.MILLISECONDS);
             nonceParam.setHasValue(true);
             signParamBuilder.nonce(nonceParam);
         }

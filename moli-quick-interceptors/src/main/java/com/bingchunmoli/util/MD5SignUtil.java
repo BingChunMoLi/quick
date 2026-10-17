@@ -26,7 +26,7 @@ public class MD5SignUtil extends AbstractSignUtil {
     @Override
     public boolean verify(HttpServletRequest request) {
         SignParamDTO signParam = getSignParam(request);
-        return doVerify(signParam);
+        return completeVerification(signParam, doVerify(signParam));
     }
 
     private boolean doVerify(SignParamDTO signParam) {

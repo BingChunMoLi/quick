@@ -18,6 +18,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 class RedisUtilTest {
 
@@ -52,6 +54,21 @@ class RedisUtilTest {
         long count = redisUtil.setList("items", List.of("a", "b"));
 
         assertThat(count).isZero();
+    }
+
+    @Test
+    void setObjectIfAbsentCreatesValueAndExpirationInOneOperation() {
+        ValueOperations<String, String> operations = mock(ValueOperations.class);
+        when(redisTemplate.opsForValue()).thenReturn(operations);
+        when(operations.setIfAbsent("nonce", "value", 2000L, TimeUnit.MILLISECONDS)).thenReturn(true, false, null);
+
+        assertThat(redisUtil.setObjectIfAbsent("nonce", "value", 2000L, TimeUnit.MILLISECONDS)).isTrue();
+        assertThat(redisUtil.setObjectIfAbsent("nonce", "value", 2000L, TimeUnit.MILLISECONDS)).isFalse();
+        assertThat(redisUtil.setObjectIfAbsent("nonce", "value", 2000L, TimeUnit.MILLISECONDS)).isFalse();
+        verify(operations, times(3)).setIfAbsent("nonce", "value", 2000L, TimeUnit.MILLISECONDS);
+        verifyNoMoreInteractions(operations);
+        verify(redisTemplate, times(3)).opsForValue();
+        verifyNoMoreInteractions(redisTemplate);
     }
 
     @Test

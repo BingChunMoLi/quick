@@ -9,6 +9,8 @@ import com.bingchunmoli.security.jwt.JwtTokenResolver;
 import com.bingchunmoli.security.jwt.JwtTokenService;
 import com.bingchunmoli.security.logout.SecurityLogoutService;
 import jakarta.servlet.http.HttpSessionEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -44,6 +46,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @ConditionalOnProperty(prefix = "moli.security", name = "enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(SecurityUtilProperties.class)
 public class SecurityUtilAutoConfiguration {
+
+    private static final Logger log = LoggerFactory.getLogger(SecurityUtilAutoConfiguration.class);
 
     @Bean
     @ConditionalOnMissingBean
@@ -101,6 +105,9 @@ public class SecurityUtilAutoConfiguration {
     @ConditionalOnProperty(prefix = "moli.security.jwt", name = "enabled", havingValue = "true",
             matchIfMissing = true)
     public JwtTokenService jwtTokenService(JwtTokenProperties jwtTokenProperties, JwtSessionStore jwtSessionStore) {
+        if (JwtTokenProperties.DEFAULT_SECRET.equals(jwtTokenProperties.getSecret())) {
+            log.warn("Using the default JWT secret. For production environments, replace moli.security.jwt.secret with a strong secret.");
+        }
         return new JwtTokenService(jwtTokenProperties, jwtSessionStore);
     }
 

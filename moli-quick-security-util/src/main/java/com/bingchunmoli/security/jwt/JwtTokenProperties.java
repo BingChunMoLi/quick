@@ -9,13 +9,15 @@ import java.time.Duration;
  */
 public class JwtTokenProperties {
 
+    public static final String DEFAULT_SECRET = "moli-quick-security-default-secret-key-change-me";
+
     private boolean enabled = true;
 
     private JwtMode mode = JwtMode.SIMPLE;
 
     private String issuer = "moli-quick";
 
-    private String secret = "moli-quick-security-default-secret-key-change-me";
+    private String secret = DEFAULT_SECRET;
 
     private Duration timeout = Duration.ofHours(2);
 

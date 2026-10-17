@@ -30,7 +30,7 @@ public abstract class RSAAbstractSignUtil extends AbstractSignUtil {
     @Override
     public boolean verify(HttpServletRequest request) {
         SignParamDTO signParam = getSignParam(request);
-        return doVerify(signParam);
+        return completeVerification(signParam, doVerify(signParam));
     }
 
     @SneakyThrows

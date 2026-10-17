@@ -96,6 +96,11 @@ mvn -N com.bingchunmoli:moli-quick-codegen-maven-plugin:1.0.13-bate:generate -Dc
 
 字段覆盖键为数据库原始列名。支持 `property`、`javaType`、`jdbcType`、`typeHandler`、`insert`、`update`、`query`、`queryType`。Java 类型使用 `String`、`Long` 等包装类型或完整类名；JDBC 类型使用 `VARCHAR`、`OTHER` 等名称。`queryType` 支持 `EQ` 和字符串 `LIKE`。
 
+原生 MyBatis 选择生成 XML 时，会在渲染前校验 Java 属性是否为 OGNL 保留字，例如 `or`、
+`eq`、`not`、`and`、`in`。错误信息包含表名、列名及属性名；请在 UI 字段配置或 YAML 中
+通过 `columns.<数据库列名>.property` 改名，例如 `columns: {or: {property: orValue}}`。
+数据库列名保持原样引用；显式属性覆盖同样接受校验，仅生成 Entity 时不受此项限制。
+
 - MySQL 使用 catalog，PostgreSQL 使用 schema，未指定时取 JDBC 连接默认值；数据库标识符按对应方言引用，schema 中的 `_`、`%` 按字面匹配。PostgreSQL 无当前 schema 时必须显式配置，遇到同名表的歧义则报错。
 - 完整 CRUD 要求单列主键；无主键和联合主键可选仅生成 Entity。单列主键参数按实际类型生成，不固定为 Long。
 - 数据库自增列和生成列不参与普通插入/更新，主键不参与更新。更新仅写入非空可更新字段；没有任何待更新字段时返回 false。首版不提供将字段显式更新为 NULL 的 PATCH 语义。

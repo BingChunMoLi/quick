@@ -4,6 +4,8 @@ import com.bingchunmoli.codegen.jdbc.DatabaseDialect;
 import com.bingchunmoli.codegen.model.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import java.nio.file.*;
 import java.sql.Types;
 import java.util.*;
@@ -89,5 +91,29 @@ class ConfigurationAndTemplatesTest {
         }
         column.javaType = "String"; column.property = "Class";
         assertThatThrownBy(() -> render(config)).isInstanceOf(CodegenException.class).hasMessageContaining("getClass");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"or", "eq", "not", "and", "bor", "xor", "band", "neq", "lt", "gt", "lte", "gte", "in", "shl", "shr", "ushr", "$"})
+    void rejectsOgnlKeywordsAndAllowsAnExplicitPropertyOverride(String keyword) {
+        var config = GeneratedCodeSupport.config("mybatis");
+        var sample = GeneratedCodeSupport.table("mysql");
+        var table = new TableMetadata(sample.catalog(), sample.schema(), sample.name(), "", List.of(sample.columns().get(0),
+                new ColumnMetadata(keyword, "", 2, Types.INTEGER, "INTEGER", 10, 0, true, null, false, false, false)));
+        assertThatThrownBy(() -> generator.preview(config, directory, List.of(table), DatabaseDialect.forProduct("MySQL")))
+                .isInstanceOf(CodegenException.class).hasMessageContaining("OGNL", "order." + keyword, "property");
+        var override = new GenerationConfig.Column(); override.property = keyword + "Value";
+        config.tables.get(0).columns.put(keyword, override);
+        assertThat(generator.preview(config, directory, List.of(table), DatabaseDialect.forProduct("MySQL"))).hasSize(7);
+    }
+
+    @Test void explicitPropertiesAreValidatedButEntityOnlyGenerationDoesNotRequireOgnl() {
+        var config = GeneratedCodeSupport.config("mybatis");
+        var override = new GenerationConfig.Column(); override.property = "eq";
+        config.tables.get(0).columns.put("display_name", override);
+        assertThatThrownBy(() -> render(config)).isInstanceOf(CodegenException.class)
+                .hasMessageContaining("OGNL", "order.display_name", "eq");
+        config.artifacts = List.of("entity");
+        assertThat(render(config)).hasSize(1);
     }
 }
