@@ -56,11 +56,14 @@ public final class QuickOAuth2WebSupport {
                 var adapter = registry.adapter(id);
                 if (adapter != null) adapter.customizeAuthorization(builder);
             });
+            http.addFilterBefore(new OAuth2CallbackMetadataFilter(properties.getLogin().getCallbackBaseUri()),
+                    OAuth2LoginAuthenticationFilter.class);
             http.oauth2Login(login -> login
                     .clientRegistrationRepository(registrations)
                     .authorizedClientRepository(clients)
                     .securityContextRepository(new RequestAttributeSecurityContextRepository())
-                    .authorizationEndpoint(endpoint -> endpoint.authorizationRequestRepository(states).authorizationRequestResolver(resolver))
+                    .authorizationEndpoint(endpoint -> endpoint.baseUri(properties.getLogin().getAuthorizationBaseUri())
+                            .authorizationRequestRepository(states).authorizationRequestResolver(resolver))
                     .redirectionEndpoint(endpoint -> endpoint.baseUri(properties.getLogin().getCallbackBaseUri()))
                     .tokenEndpoint(endpoint -> endpoint.accessTokenResponseClient(tokenClients.authorizationCode()))
                     .userInfoEndpoint(endpoint -> endpoint.userService(userService).oidcUserService(oidcUserService))

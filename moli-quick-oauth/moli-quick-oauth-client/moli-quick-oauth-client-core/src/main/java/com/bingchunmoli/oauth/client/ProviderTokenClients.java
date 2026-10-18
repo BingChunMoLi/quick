@@ -8,9 +8,12 @@ public final class ProviderTokenClients {
     private final OAuth2ProviderRegistry registry;
     private final OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> code;
     private final OAuth2AccessTokenResponseClient<OAuth2RefreshTokenGrantRequest> refresh;
+    private final OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> defaultCode = new RestClientAuthorizationCodeTokenResponseClient();
+    private final OAuth2AccessTokenResponseClient<OAuth2RefreshTokenGrantRequest> defaultRefresh = new RestClientRefreshTokenTokenResponseClient();
     public ProviderTokenClients(OAuth2ProviderRegistry registry) {
-        this(registry, new RestClientAuthorizationCodeTokenResponseClient(), new RestClientRefreshTokenTokenResponseClient());
+        this(registry, null, null);
     }
+    /** Explicit clients override channel defaults independently; null delegates to the channel or Spring. */
     public ProviderTokenClients(OAuth2ProviderRegistry registry,
             OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> code,
             OAuth2AccessTokenResponseClient<OAuth2RefreshTokenGrantRequest> refresh) {
@@ -19,15 +22,15 @@ public final class ProviderTokenClients {
     public OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> authorizationCode() {
         return request -> {
             var adapter = registry.adapter(request.getClientRegistration().getRegistrationId());
-            var client = adapter == null ? null : adapter.authorizationCodeClient();
-            return normalize(request.getClientRegistration().getRegistrationId(), (client == null ? code : client).getTokenResponse(request));
+            var client = code != null ? code : adapter == null ? null : adapter.authorizationCodeClient();
+            return normalize(request.getClientRegistration().getRegistrationId(), (client == null ? defaultCode : client).getTokenResponse(request));
         };
     }
     public OAuth2AccessTokenResponseClient<OAuth2RefreshTokenGrantRequest> refreshToken() {
         return request -> {
             var adapter = registry.adapter(request.getClientRegistration().getRegistrationId());
-            var client = adapter == null ? null : adapter.refreshTokenClient();
-            return normalize(request.getClientRegistration().getRegistrationId(), (client == null ? refresh : client).getTokenResponse(request));
+            var client = refresh != null ? refresh : adapter == null ? null : adapter.refreshTokenClient();
+            return normalize(request.getClientRegistration().getRegistrationId(), (client == null ? defaultRefresh : client).getTokenResponse(request));
         };
     }
     private OAuth2AccessTokenResponse normalize(String registrationId, OAuth2AccessTokenResponse response) {

@@ -3,6 +3,8 @@ package com.bingchunmoli.oauth.client.redis;
 import com.bingchunmoli.oauth.client.*;
 import com.bingchunmoli.oauth.client.autoconfigure.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -28,5 +30,20 @@ class RedisOAuth2AutoConfigurationTest {
         runner().run(context -> assertThat(context).hasNotFailed().doesNotHaveBean(RedisRefreshCoordinator.class));
         runner().withPropertyValues("moli.oauth.client.refresh.coordination=redis")
                 .run(context -> assertThat(context).hasFailed());
+    }
+    @ParameterizedTest
+    @CsvSource({"Redis,auto", "REDIS,AUTO", "redis,REDIS", "Redis,LOCAL"})
+    void configurationCaseCannotSilentlyChangeTheRefreshCoordinator(String store, String coordination) {
+        runner().withBean(StringRedisTemplate.class, () -> org.mockito.Mockito.mock(StringRedisTemplate.class))
+                .withPropertyValues("moli.oauth.client.authorized-client.store=" + store,
+                        "moli.oauth.client.refresh.coordination=" + coordination)
+                .run(context -> {
+                    assertThat(context).hasNotFailed().hasSingleBean(RedisOAuth2AuthorizedClientService.class);
+                    if ("local".equalsIgnoreCase(coordination)) {
+                        assertThat(context).hasSingleBean(LocalRefreshCoordinator.class).doesNotHaveBean(RedisRefreshCoordinator.class);
+                    } else {
+                        assertThat(context).hasSingleBean(RedisRefreshCoordinator.class).doesNotHaveBean(LocalRefreshCoordinator.class);
+                    }
+                });
     }
 }

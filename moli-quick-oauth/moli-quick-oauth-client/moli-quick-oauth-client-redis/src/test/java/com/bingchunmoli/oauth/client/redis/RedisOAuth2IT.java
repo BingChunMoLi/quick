@@ -9,13 +9,17 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.context.annotation.*;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.mock.web.*;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -29,6 +33,8 @@ import org.springframework.security.oauth2.core.user.*;
 import org.springframework.security.web.*;
 import org.springframework.web.util.UriComponentsBuilder;
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 class RedisOAuth2IT {
     static LettuceConnectionFactory factory;
@@ -97,6 +103,23 @@ class RedisOAuth2IT {
         } finally { first.removeAuthorizedClient("test", principal); }
         assertThat((OAuth2AuthorizedClient) second.loadAuthorizedClient("test", principal)).isNull();
     }
+    @Test void tokenTtlRetainsAccessAfterRefreshExpires() {
+        String principal = UUID.randomUUID().toString();
+        var service = new RedisOAuth2AuthorizedClientService(redis, registrations, null);
+        var ref = new AuthorizedClientRef("test", principal);
+        try {
+            Instant now = Instant.now();
+            service.saveAuthorizedClient(client(principal, now.plusSeconds(300),
+                    new OAuth2RefreshToken("refresh", now.minusSeconds(100), now.plusSeconds(30))),
+                    QuickOAuth2Client.principal(principal));
+            assertThat(redis.getExpire(RedisOAuth2AuthorizedClientService.tokenKey(ref))).isBetween(290L, 300L);
+            service.saveAuthorizedClient(client(principal, null,
+                    new OAuth2RefreshToken("expired-refresh", now.minusSeconds(100), now.minusSeconds(1))),
+                    QuickOAuth2Client.principal(principal));
+            assertThat(redis.getExpire(RedisOAuth2AuthorizedClientService.tokenKey(ref))).isEqualTo(-1);
+            assertThat(((OAuth2AuthorizedClient) service.loadAuthorizedClient("test", principal)).getAccessToken().getExpiresAt()).isNull();
+        } finally { service.removeAuthorizedClient("test", principal); }
+    }
     @Test void separateInstancesCoordinateRefreshAndRenewLease() throws Exception {
         String principal = UUID.randomUUID().toString();
         try (var first = new RedisRefreshCoordinator(redis, Duration.ofSeconds(4), Duration.ofMillis(600));
@@ -138,6 +161,33 @@ class RedisOAuth2IT {
                         QuickOAuth2Client.principal(ref.principalName()))).hasMessageContaining("ownership lost");
             }
             assertThat(redis.opsForValue().get(RedisRefreshCoordinator.lockKey(ref))).isEqualTo("replacement");
+        } finally { redis.delete(RedisRefreshCoordinator.lockKey(ref)); }
+    }
+    @Test @SuppressWarnings("unchecked")
+    void timedOutAndShutdownAcquisitionsLeaveNoRedisLock() {
+        var ref = new AuthorizedClientRef("test", UUID.randomUUID().toString());
+        var intercepted = spy(redis);
+        ValueOperations<String, String> operations = mock(ValueOperations.class);
+        doReturn(operations).when(intercepted).opsForValue();
+        var stopping = new AtomicReference<RedisRefreshCoordinator>();
+        when(operations.setIfAbsent(anyString(), anyString(), any(Duration.class))).thenAnswer(invocation -> {
+            if (stopping.get() == null) Thread.sleep(100);
+            Boolean acquired = redis.opsForValue().setIfAbsent(invocation.getArgument(0), invocation.getArgument(1), invocation.getArgument(2, Duration.class));
+            if (stopping.get() != null) stopping.get().close();
+            return acquired;
+        });
+        try (var slow = new RedisRefreshCoordinator(intercepted, Duration.ofMillis(30), Duration.ofSeconds(5));
+             var stopped = new RedisRefreshCoordinator(intercepted, Duration.ofSeconds(2), Duration.ofSeconds(5));
+             var observer = new RedisRefreshCoordinator(redis, Duration.ofSeconds(2), Duration.ofSeconds(5))) {
+            assertThatThrownBy(() -> slow.acquire(ref)).hasMessageContaining("timed out");
+            assertThat(slow.ownership()).isNull();
+            assertThat(redis.hasKey(RedisRefreshCoordinator.lockKey(ref))).isFalse();
+            stopping.set(stopped);
+            assertThatThrownBy(() -> stopped.acquire(ref)).hasMessageContaining("closed");
+            assertThat(stopped.ownership()).isNull();
+            assertThat(redis.hasKey(RedisRefreshCoordinator.lockKey(ref))).isFalse();
+            try (var lease = observer.acquire(ref)) { lease.checkOwned(); }
+            assertThat(redis.hasKey(RedisRefreshCoordinator.lockKey(ref))).isFalse();
         } finally { redis.delete(RedisRefreshCoordinator.lockKey(ref)); }
     }
     @Test void differentApplicationNamespacesCannotReadEachOthersTokensOrLocks() {
@@ -185,34 +235,44 @@ class RedisOAuth2IT {
             return http.build();
         }
     }
-    @Test void actualSecurityChainKeepsSuccessAndErrorPathsSessionless() {
+    @ParameterizedTest @ValueSource(strings = {"memory", "REDIS"})
+    void actualSecurityChainKeepsSuccessAndErrorPathsSessionless(String authorizedClientStore) {
         new WebApplicationContextRunner().withConfiguration(AutoConfigurations.of(
                 RedisOAuth2AutoConfiguration.class, RedisOAuth2WebAutoConfiguration.class,
                 QuickOAuth2AutoConfiguration.class, QuickOAuth2WebAutoConfiguration.class))
                 .withUserConfiguration(Host.class).withPropertyValues("moli.oauth.client.enabled=true",
-                        "moli.oauth.client.login.enabled=true", "moli.oauth.client.authorization-state.store=redis",
+                        "moli.oauth.client.login.enabled=true", "moli.oauth.client.authorization-state.store=REDIS",
+                        "moli.oauth.client.authorized-client.store=" + authorizedClientStore,
+                        "moli.oauth.client.refresh.coordination=AUTO",
                         "moli.oauth.client.authorization-state.cookie-secure=false")
                 .run(context -> {
                     assertThat(context).hasNotFailed();
-                    var filters = context.getBean(FilterChainProxy.class);
-                    var start = request("/oauth2/authorization/test"); var redirect = new MockHttpServletResponse();
-                    filters.doFilter(start, redirect, new MockFilterChain());
-                    assertThat(start.getSession(false)).isNull();
-                    String state = URLDecoder.decode(UriComponentsBuilder.fromUriString(redirect.getRedirectedUrl()).build()
-                            .getQueryParams().getFirst("state"), StandardCharsets.UTF_8);
-                    var callback = callback(state, redirect.getHeader("Set-Cookie"));
-                    callback.setRequestURI("/login/oauth2/code/test"); callback.setServletPath("/login/oauth2/code/test");
-                    callback.setParameter("code", "code");
-                    var response = new MockHttpServletResponse();
-                    filters.doFilter(callback, response, new MockFilterChain());
-                    assertThat(response.getStatus()).isEqualTo(204);
-                    assertThat(callback.getSession(false)).isNull();
-                    var denied = request("/login/oauth2/code/test");
-                    denied.setParameter("state", state); denied.setParameter("code", "code");
-                    var error = new MockHttpServletResponse();
-                    filters.doFilter(denied, error, new MockFilterChain());
-                    assertThat(error.getStatus()).isEqualTo(401);
-                    assertThat(denied.getSession(false)).isNull();
+                    if ("redis".equalsIgnoreCase(authorizedClientStore)) {
+                        assertThat(context).hasSingleBean(RedisRefreshCoordinator.class).hasSingleBean(RedisOAuth2AuthorizedClientService.class);
+                    }
+                    try {
+                        var filters = context.getBean(FilterChainProxy.class);
+                        var start = request("/oauth2/authorization/test"); var redirect = new MockHttpServletResponse();
+                        filters.doFilter(start, redirect, new MockFilterChain());
+                        assertThat(start.getSession(false)).isNull();
+                        String state = URLDecoder.decode(UriComponentsBuilder.fromUriString(redirect.getRedirectedUrl()).build()
+                                .getQueryParams().getFirst("state"), StandardCharsets.UTF_8);
+                        var callback = callback(state, redirect.getHeader("Set-Cookie"));
+                        callback.setRequestURI("/login/oauth2/code/test"); callback.setServletPath("/login/oauth2/code/test");
+                        callback.setParameter("code", "code");
+                        var response = new MockHttpServletResponse();
+                        filters.doFilter(callback, response, new MockFilterChain());
+                        assertThat(response.getStatus()).isEqualTo(204);
+                        assertThat(callback.getSession(false)).isNull();
+                        var denied = request("/login/oauth2/code/test");
+                        denied.setParameter("state", state); denied.setParameter("code", "code");
+                        var error = new MockHttpServletResponse();
+                        filters.doFilter(denied, error, new MockFilterChain());
+                        assertThat(error.getStatus()).isEqualTo(401);
+                        assertThat(denied.getSession(false)).isNull();
+                    } finally {
+                        context.getBean(QuickOAuth2Client.class).remove(new AuthorizedClientRef("test", "external"));
+                    }
                 });
     }
     static MockHttpServletRequest request(String path) {

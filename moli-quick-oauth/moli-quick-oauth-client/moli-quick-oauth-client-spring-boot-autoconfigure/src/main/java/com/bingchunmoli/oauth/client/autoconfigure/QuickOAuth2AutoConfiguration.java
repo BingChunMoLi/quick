@@ -9,6 +9,8 @@ import org.springframework.boot.autoconfigure.condition.*;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.security.oauth2.client.autoconfigure.*;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
+import org.springframework.context.annotation.ConfigurationCondition.ConfigurationPhase;
 import org.springframework.security.oauth2.client.*;
 import org.springframework.security.oauth2.client.endpoint.*;
 import org.springframework.security.oauth2.client.registration.*;
@@ -21,6 +23,18 @@ import org.springframework.security.oauth2.client.registration.*;
 @ConditionalOnProperty(prefix = "moli.oauth.client", name = "enabled", havingValue = "true")
 @EnableConfigurationProperties({QuickOAuth2Properties.class, OAuth2ClientProperties.class})
 public class QuickOAuth2AutoConfiguration {
+    @Bean
+    @ConditionalOnProperty(prefix = "moli.oauth.client.login", name = "enabled", havingValue = "true")
+    @Conditional(NotServletApplication.class)
+    SmartInitializingSingleton quickOAuth2LoginEnvironmentValidation() {
+        return () -> { throw new IllegalStateException("OAuth2 browser login requires a Servlet web application; disable moli.oauth.client.login.enabled for background API calls"); };
+    }
+
+    static final class NotServletApplication extends NoneNestedConditions {
+        NotServletApplication() { super(ConfigurationPhase.REGISTER_BEAN); }
+        @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+        static class ServletApplication { }
+    }
     @Bean @ConditionalOnMissingBean
     OAuth2ProviderRegistry oauth2ProviderRegistry(ObjectProvider<OAuth2ProviderAdapter> adapters,
             OAuth2ClientProperties nativeProperties, QuickOAuth2Properties quick) {
@@ -106,8 +120,7 @@ public class QuickOAuth2AutoConfiguration {
     ProviderTokenClients quickProviderTokenClients(OAuth2ProviderRegistry registry,
             ObjectProvider<OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest>> code,
             ObjectProvider<OAuth2AccessTokenResponseClient<OAuth2RefreshTokenGrantRequest>> refresh) {
-        return new ProviderTokenClients(registry, code.getIfAvailable(RestClientAuthorizationCodeTokenResponseClient::new),
-                refresh.getIfAvailable(RestClientRefreshTokenTokenResponseClient::new));
+        return new ProviderTokenClients(registry, code.getIfAvailable(), refresh.getIfAvailable());
     }
 
     @Bean @ConditionalOnMissingBean(OAuth2AuthorizedClientProvider.class)

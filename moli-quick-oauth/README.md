@@ -60,7 +60,7 @@ OAuth2LoginHandler oauth2LoginHandler() {
 }
 ```
 
-相关类型位于 `com.bingchunmoli.oauth.client` 和 `.web` 包。登录启用却缺少处理器或未应用 configurer 时启动失败。仅需后台 API 调用时不启用 `login.enabled`，也不需要 Web 安全链或处理器。
+相关类型位于 `com.bingchunmoli.oauth.client` 和 `.web` 包。登录要求 Servlet Web 应用；非 Web 或 Reactive 应用启用登录、缺少处理器或未应用 configurer 时启动失败。仅需后台 API 调用时不启用 `login.enabled`，也不需要 Web 安全链或处理器。
 
 Quick 不持久化第三方 Authentication 作为业务登录。授权跳转所用 Session 与业务登录 Session 是两个概念；默认只将临时授权请求保存在 Session。
 
@@ -84,7 +84,7 @@ JWT 登录回调由宿主 Token 服务签发本地令牌，通过自己的响应
 
 ## 配置与持久化
 
-默认值：Quick 关闭、登录关闭、临时状态 `session`、长期令牌 `memory`、刷新协调 `auto`，等待 15 秒、Redis 租约 30 秒。
+默认值：Quick 关闭、登录关闭、临时状态 `session`、长期令牌 `memory`、刷新协调 `auto`，等待 15 秒、Redis 租约 30 秒。存储类型及刷新协调选项不区分大小写。
 
 ```yaml
 moli:
@@ -115,7 +115,7 @@ moli:
 
 选择 JDBC 需增加 `moli-quick-oauth-client-jdbc`，提供 `DataSource`，设置 `authorized-client.store: jdbc`。在目标库手工执行该 JAR 的 `com/bingchunmoli/oauth/client/jdbc/schema-mysql.sql` 或 `schema-postgresql.sql`，Quick 不自动建表。不要与 Spring 原生 JDBC 授权表混用。
 
-长期令牌采用带版本的数据编码，不保存客户端密钥。令牌数据本身是敏感数据，存储编码不提供加密；由宿主控制数据库/Redis 访问及传输保护。Redis 根据已知最终有效期设置 TTL；长期 access token 或未知有效期的 refresh token 不提前淘汰，可通过 API 显式移除。内存存储适用于单实例或开发，重启丢失授权。
+长期令牌采用带版本的数据编码，不保存客户端密钥。令牌数据本身是敏感数据，存储编码不提供加密；由宿主控制数据库/Redis 访问及传输保护。Redis 根据 access/refresh token 中较晚的已知有效期设置 TTL；长期 access token 或未知有效期的 refresh token 不提前淘汰，可通过 API 显式移除。refresh token 已过期时，仍有效的 access token 可继续使用至到期，再要求重新授权。内存存储适用于单实例或开发，重启丢失授权。
 
 选择不存在的存储模块、缺少连接 Bean、无效配置时启动失败。宿主自定义 Bean 优先于默认实现。Quick 显式启用时仅排除 Boot 原生 OAuth2 Web 自动配置，自己提供授权仓库；不创建业务安全链，不改变宿主整体 Session/CSRF 规则。关闭 Quick 不干预原生 Boot 行为。
 
@@ -135,6 +135,8 @@ RestClient 为特定可信 API 专用，勿接受用户输入的任意目标 URL
 
 刷新持锁后重读令牌，Redis 租约续期并检查所有者，Redis 保存与所有权检查通过同一 Lua 脚本执行。等待超时、Redis 故障、所有权丢失均失败；不承诺在网络分区或外部服务已处理请求但响应丢失时“恰好一次”。JDBC 配合 Redis 时不提供跨数据库/Redis 的原子事务。`invalid_grant` 清理失效授权；调用方收到 `AuthorizationRequiredException` 后引导用户重新授权。
 
+刷新锁等待期限计入 Redis 取锁请求的往返耗时，迟到的成功响应会释放锁并失败。协调器关闭后拒绝新取锁请求；关闭与取锁并发时，也会清理已获得的锁及线程状态。Redis 单次连接/命令超时由宿主 Redis 客户端配置控制。
+
 ## GitHub 与新增渠道
 
 GitHub 默认 scope 为 `read:user`，自动使用 S256 PKCE。`moli.oauth.client.github.fetch-email: true` 为默认 scope 增加 `user:email`，并读取经过验证的邮箱；显式 scope 不会被覆盖。`offline_access` 可在原生 scope 中按需增加。兼容长期 access token 和带 `expires_in` / `refresh_token_expires_in` 的响应。
@@ -143,7 +145,7 @@ GitHub 默认 scope 为 `read:user`，自动使用 S256 PKCE。`moli.oauth.clien
 
 QQ、微信等新渠道创建独立模块，实现 `OAuth2ProviderAdapter` 并注册 Bean；通过 AutoConfiguration.imports 注册，适配默认端点、请求参数、Token 转换、用户服务和身份映射。无需修改 Core 或 Starter。适配器 ID 必须唯一，显式配置覆盖渠道默认值。通用 OAuth2/OIDC 可直接使用原生端点/issuer 配置，不必创建渠道模块。
 
-可替换原生 registration/service/manager/provider Bean；Web 用户服务分别使用 Bean 名 `quickOAuth2UserService`、`quickOidcUserService`，失败处理器使用 `quickOAuth2FailureHandler`。保留 OIDC 原生用户及 ID Token。自定义 `ProviderTokenClients` 或渠道 Token 客户端可复用宿主 HTTP 配置。
+可替换原生 registration/service/manager/provider Bean；Web 用户服务分别使用 Bean 名 `quickOAuth2UserService`、`quickOidcUserService`，失败处理器使用 `quickOAuth2FailureHandler`。保留 OIDC 原生用户及 ID Token。宿主声明对应泛型的 `OAuth2AccessTokenResponseClient` Bean，可分别覆盖授权码、刷新和应用授权的 Token 客户端，优先于渠道默认值；只覆盖一个授权类型时，其他类型仍使用渠道或 Spring 默认实现。自定义 `ProviderTokenClients` 或渠道 Token 客户端可复用宿主 HTTP 配置，并负责保留所需的渠道 Token 转换行为。
 
 ## 测试与真实 GitHub 冒烟
 

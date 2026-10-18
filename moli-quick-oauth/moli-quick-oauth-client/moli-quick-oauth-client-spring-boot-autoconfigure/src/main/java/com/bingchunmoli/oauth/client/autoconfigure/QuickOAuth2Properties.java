@@ -3,10 +3,15 @@ package com.bingchunmoli.oauth.client.autoconfigure;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Locale;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("moli.oauth.client")
 public class QuickOAuth2Properties {
+    private static String option(String value) {
+        if (value == null || value.isBlank()) throw new IllegalArgumentException("OAuth2 storage and coordination options must be nonblank");
+        return value.toLowerCase(Locale.ROOT);
+    }
     private boolean enabled;
     private final Login login = new Login();
     private final AuthorizationState authorizationState = new AuthorizationState();
@@ -48,7 +53,7 @@ public class QuickOAuth2Properties {
         private Duration ttl = Duration.ofMinutes(10);
         private boolean cookieSecure = true;
         public String getStore() { return store; }
-        public void setStore(String value) { store = value; }
+        public void setStore(String value) { store = option(value); }
         public Duration getTtl() { return ttl; }
         public void setTtl(Duration value) { ttl = value; }
         public boolean isCookieSecure() { return cookieSecure; }
@@ -57,14 +62,14 @@ public class QuickOAuth2Properties {
     public static class AuthorizedClient {
         private String store = "memory";
         public String getStore() { return store; }
-        public void setStore(String value) { store = value; }
+        public void setStore(String value) { store = option(value); }
     }
     public static class Refresh {
         private String coordination = "auto";
         private Duration waitTimeout = Duration.ofSeconds(15);
         private Duration lease = Duration.ofSeconds(30);
         public String getCoordination() { return coordination; }
-        public void setCoordination(String value) { coordination = value; }
+        public void setCoordination(String value) { coordination = option(value); }
         public Duration getWaitTimeout() { return waitTimeout; }
         public void setWaitTimeout(Duration value) { waitTimeout = value; }
         public Duration getLease() { return lease; }

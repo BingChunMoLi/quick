@@ -13,7 +13,8 @@ public final class CoordinatedAuthorizedClientManager implements OAuth2Authorize
     private final RefreshCoordinator coordinator;
     private final AuthorizedClientServiceOAuth2AuthorizedClientManager delegate;
     private final OAuth2AuthorizedClientService service;
-    private final ThreadLocal<RefreshCoordinator.Lease> current = new ThreadLocal<>();
+    private record Attempt(AuthorizedClientRef reference, RefreshCoordinator.Lease lease) { }
+    private final ThreadLocal<Attempt> current = new ThreadLocal<>();
 
     public CoordinatedAuthorizedClientManager(ClientRegistrationRepository registrations,
             OAuth2AuthorizedClientService service, OAuth2AuthorizedClientProvider provider,
@@ -23,7 +24,7 @@ public final class CoordinatedAuthorizedClientManager implements OAuth2Authorize
         delegate = new AuthorizedClientServiceOAuth2AuthorizedClientManager(registrations, service);
         delegate.setAuthorizedClientProvider(provider);
         delegate.setAuthorizationSuccessHandler((client, principal, attributes) -> {
-            current.get().checkOwned();
+            current.get().lease().checkOwned();
             OAuth2AuthorizedClient normalized = TokenResponseMetadata.applyAndClear(client);
             OAuth2AuthorizedClient previous = service.loadAuthorizedClient(client.getClientRegistration().getRegistrationId(), principal.getName());
             var refresh = normalized.getRefreshToken();
@@ -34,14 +35,16 @@ public final class CoordinatedAuthorizedClientManager implements OAuth2Authorize
                         new org.springframework.security.oauth2.core.OAuth2RefreshToken(refresh.getTokenValue(), refresh.getIssuedAt(),
                                 previous.getRefreshToken().getExpiresAt()));
             }
-            current.get().checkOwned();
+            current.get().lease().checkOwned();
             service.saveAuthorizedClient(normalized, principal);
         });
         delegate.setAuthorizationFailureHandler((failure, principal, attributes) -> {
+            Attempt attempt = current.get();
             if ("invalid_grant".equals(failure.getError().getErrorCode()) &&
-                    failure instanceof org.springframework.security.oauth2.client.ClientAuthorizationException clientFailure) {
-                current.get().checkOwned();
-                service.removeAuthorizedClient(clientFailure.getClientRegistrationId(), principal.getName());
+                    (!(failure instanceof org.springframework.security.oauth2.client.ClientAuthorizationException clientFailure) ||
+                            attempt.reference().registrationId().equals(clientFailure.getClientRegistrationId()))) {
+                attempt.lease().checkOwned();
+                service.removeAuthorizedClient(attempt.reference().registrationId(), attempt.reference().principalName());
             }
         });
     }
@@ -51,14 +54,16 @@ public final class CoordinatedAuthorizedClientManager implements OAuth2Authorize
         AuthorizedClientRef ref = new AuthorizedClientRef(request.getClientRegistrationId(), request.getPrincipal().getName());
         try (TokenResponseMetadata.Scope scope = TokenResponseMetadata.scope();
              RefreshCoordinator.Lease lease = coordinator.acquire(ref)) {
-            current.set(lease);
+            current.set(new Attempt(ref, lease));
             // Do not accept a caller-supplied stale authorizedClient.
             OAuth2AuthorizedClient stored = service.loadAuthorizedClient(ref.registrationId(), ref.principalName());
             if (stored != null && stored.getRefreshToken() != null && stored.getRefreshToken().getExpiresAt() != null &&
-                    !stored.getRefreshToken().getExpiresAt().isAfter(java.time.Instant.now()) &&
-                    stored.getAccessToken().getExpiresAt() != null &&
-                    !stored.getAccessToken().getExpiresAt().isAfter(java.time.Instant.now())) {
+                    !stored.getRefreshToken().getExpiresAt().isAfter(java.time.Instant.now())) {
                 lease.checkOwned();
+                // Spring refreshes within its clock skew without checking refresh-token expiry.
+                // Keep using a valid access token until reauthorization is actually required.
+                if (stored.getAccessToken().getExpiresAt() == null ||
+                        stored.getAccessToken().getExpiresAt().isAfter(java.time.Instant.now())) return stored;
                 service.removeAuthorizedClient(ref.registrationId(), ref.principalName());
                 throw new AuthorizationRequiredException();
             }

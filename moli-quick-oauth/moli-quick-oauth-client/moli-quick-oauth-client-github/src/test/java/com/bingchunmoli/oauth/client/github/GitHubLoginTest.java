@@ -34,14 +34,22 @@ class GitHubLoginTest {
         server.createContext("/token", exchange -> {
             String form = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
             tokenRequest.set(form);
+            boolean emailScopes = form.contains("code=emails") || form.contains("grant_type=refresh_token");
             String data = form.contains("code=long") ? "{\"access_token\":\"access\",\"token_type\":\"bearer\",\"scope\":\"read:user\"}" :
                     "{\"access_token\":\"access\",\"token_type\":\"bearer\",\"scope\":\"read:user\",\"expires_in\":3600,\"refresh_token\":\"refresh\",\"refresh_token_expires_in\":7200}";
+            if (emailScopes) data = data.replace("read:user", "read:user,user:email");
             byte[] bytes = data.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().set("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes); exchange.close();
         });
         server.createContext("/user", exchange -> {
             byte[] bytes = "{\"id\":42,\"login\":\"octocat\",\"name\":\"章鱼\",\"avatar_url\":\"https://example/avatar\"}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes); exchange.close();
+        });
+        server.createContext("/emails", exchange -> {
+            byte[] bytes = ("[{\"email\":\"unverified@example.test\",\"primary\":true,\"verified\":false}," +
+                    "{\"email\":\"verified@example.test\",\"primary\":true,\"verified\":true}]").getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().set("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes); exchange.close();
         });
@@ -79,6 +87,71 @@ class GitHubLoginTest {
                 response.setStatus(204);
             };
         }
+    }
+    @Configuration(proxyBeanMethods = false)
+    static class UnavailableRefreshCoordinator {
+        @Bean RefreshCoordinator coordinator() {
+            return ref -> { throw new IllegalStateException("test coordination unavailable"); };
+        }
+    }
+    @Configuration(proxyBeanMethods = false)
+    static class FailingUserService {
+        @Bean(name = "quickOAuth2UserService")
+        org.springframework.security.oauth2.client.userinfo.OAuth2UserService<
+                org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest,
+                org.springframework.security.oauth2.core.user.OAuth2User> userService() {
+            return request -> { throw new IllegalStateException("test user service unavailable"); };
+        }
+    }
+    @Test void callbackStorageFailureDoesNotLeaveTokenMetadataOnTheWorkerThread() {
+        assertFailedCallbackClearsMetadata(UnavailableRefreshCoordinator.class, "test coordination unavailable");
+    }
+    @Test void callbackUserServiceFailureDoesNotLeaveTokenMetadataOnTheWorkerThread() {
+        assertFailedCallbackClearsMetadata(FailingUserService.class, "test user service unavailable");
+    }
+    private void assertFailedCallbackClearsMetadata(Class<?> hostConfiguration, String error) {
+        runner().withUserConfiguration(hostConfiguration).run(context -> {
+            try {
+                var filters = context.getBean(FilterChainProxy.class);
+                var start = request("/oauth2/authorization/work"); var redirect = new MockHttpServletResponse();
+                filters.doFilter(start, redirect, new MockFilterChain());
+                String state = UriComponentsBuilder.fromUriString(redirect.getRedirectedUrl()).build().getQueryParams().getFirst("state");
+                var callback = request("/login/oauth2/code/work"); callback.setSession(start.getSession(false));
+                callback.setParameter("state", URLDecoder.decode(state, StandardCharsets.UTF_8)); callback.setParameter("code", "long");
+                assertThatThrownBy(() -> filters.doFilter(callback, new MockHttpServletResponse(), new MockFilterChain()))
+                        .hasMessageContaining(error);
+                var registration = context.getBean(org.springframework.security.oauth2.client.registration.ClientRegistrationRepository.class)
+                        .findByRegistrationId("work");
+                var probe = new OAuth2AuthorizedClient(registration, "42", new org.springframework.security.oauth2.core.OAuth2AccessToken(
+                        org.springframework.security.oauth2.core.OAuth2AccessToken.TokenType.BEARER, "access",
+                        java.time.Instant.now(), java.time.Instant.now().plusSeconds(300)));
+                assertThat(TokenResponseMetadata.applyAndClear(probe).getAccessToken().getExpiresAt())
+                        .isEqualTo(probe.getAccessToken().getExpiresAt());
+            } finally { TokenResponseMetadata.clear(); }
+        });
+    }
+    @Test void customAuthorizationAndCallbackPathsWorkUnderAContextPath() {
+        runner().withPropertyValues("moli.oauth.client.login.authorization-base-uri=/sso/start",
+                "moli.oauth.client.login.callback-base-uri=/sso/callback/*",
+                "spring.security.oauth2.client.registration.work.redirect-uri={baseUrl}/sso/callback/{registrationId}")
+                .run(context -> {
+                    var filters = context.getBean(FilterChainProxy.class);
+                    var login = request("/app/login"); login.setContextPath("/app"); login.setServletPath("/login");
+                    var page = new MockHttpServletResponse(); filters.doFilter(login, page, new MockFilterChain());
+                    assertThat(page.getContentAsString()).contains("/app/sso/start/work").doesNotContain("/app/oauth2/authorization/work");
+                    var start = request("/app/sso/start/work"); start.setContextPath("/app"); start.setServletPath("/sso/start/work");
+                    var redirect = new MockHttpServletResponse(); filters.doFilter(start, redirect, new MockFilterChain());
+                    var query = UriComponentsBuilder.fromUriString(redirect.getRedirectedUrl()).build().getQueryParams();
+                    assertThat(URLDecoder.decode(query.getFirst("redirect_uri"), StandardCharsets.UTF_8))
+                            .isEqualTo("http://localhost/app/sso/callback/work");
+                    var callback = request("/app/sso/callback/work"); callback.setContextPath("/app"); callback.setServletPath("/sso/callback/work");
+                    callback.setSession(start.getSession(false));
+                    callback.setParameter("state", URLDecoder.decode(query.getFirst("state"), StandardCharsets.UTF_8)); callback.setParameter("code", "ok");
+                    var response = new MockHttpServletResponse(); filters.doFilter(callback, response, new MockFilterChain());
+                    assertThat(failure.getAndSet(null)).isNull();
+                    assertThat(response.getStatus()).isEqualTo(204);
+                    assertThat(callback.getSession(false).getAttribute("SPRING_SECURITY_CONTEXT")).isNull();
+                });
     }
     @Test void callbackUsesPkceAndDoesNotPersistProviderAsBusinessLogin() {
         runner().run(context -> {
@@ -137,6 +210,37 @@ class GitHubLoginTest {
                 "spring.security.oauth2.client.registration.app.client-id=id",
                 "spring.security.oauth2.client.registration.app.authorization-grant-type=client_credentials")
                 .run(context -> assertThat(context).hasFailed());
+    }
+    @Test void sessionAndMemoryOptionsAcceptTheSameCaseVariantsAsRedis() {
+        runner().withPropertyValues("moli.oauth.client.authorization-state.store=SESSION",
+                "moli.oauth.client.authorized-client.store=MEMORY", "moli.oauth.client.refresh.coordination=LOCAL")
+                .run(context -> assertThat(context).hasNotFailed().hasSingleBean(SessionAuthorizationRequestRepository.class)
+                        .hasSingleBean(InMemoryOAuth2AuthorizedClientService.class).hasSingleBean(LocalRefreshCoordinator.class));
+    }
+    @Test void commaDelimitedScopesSupportVerifiedEmailAndTokenRefresh() {
+        runner().withPropertyValues("moli.oauth.client.github.fetch-email=true",
+                "moli.oauth.client.github.email-uri=" + base + "/emails").run(context -> {
+            var filters = context.getBean(FilterChainProxy.class);
+            var start = request("/oauth2/authorization/work"); var redirect = new MockHttpServletResponse();
+            filters.doFilter(start, redirect, new MockFilterChain());
+            String state = UriComponentsBuilder.fromUriString(redirect.getRedirectedUrl()).build().getQueryParams().getFirst("state");
+            var callback = request("/login/oauth2/code/work"); callback.setSession(start.getSession(false));
+            callback.setParameter("state", URLDecoder.decode(state, StandardCharsets.UTF_8)); callback.setParameter("code", "emails");
+            var response = new MockHttpServletResponse(); filters.doFilter(callback, response, new MockFilterChain());
+            assertThat(failure.getAndSet(null)).isNull();
+            assertThat(response.getStatus()).isEqualTo(204);
+            assertThat(identity.get().email()).isEqualTo("verified@example.test");
+            var service = context.getBean(OAuth2AuthorizedClientService.class);
+            OAuth2AuthorizedClient saved = service.loadAuthorizedClient("work", "42");
+            assertThat(saved.getAccessToken().getScopes()).containsExactlyInAnyOrder("read:user", "user:email");
+            service.saveAuthorizedClient(new OAuth2AuthorizedClient(saved.getClientRegistration(), "42",
+                    new org.springframework.security.oauth2.core.OAuth2AccessToken(saved.getAccessToken().getTokenType(),
+                            "expired", java.time.Instant.now().minusSeconds(100), java.time.Instant.now().minusSeconds(1),
+                            saved.getAccessToken().getScopes()), saved.getRefreshToken()), QuickOAuth2Client.principal("42"));
+            var refreshed = context.getBean(QuickOAuth2Client.class).authorize(new AuthorizedClientRef("work", "42"));
+            assertThat(refreshed.getAccessToken().getScopes()).containsExactlyInAnyOrder("read:user", "user:email");
+            assertThat(refreshed.getRefreshToken().getExpiresAt()).isAfter(java.time.Instant.now().plusSeconds(7000));
+        });
     }
     @Test void existingBusinessContextSurvivesAndSecurityUtilDefaultChainBacksOff() {
         runner().withConfiguration(AutoConfigurations.of(com.bingchunmoli.security.autoconfigure.SecurityUtilAutoConfiguration.class))

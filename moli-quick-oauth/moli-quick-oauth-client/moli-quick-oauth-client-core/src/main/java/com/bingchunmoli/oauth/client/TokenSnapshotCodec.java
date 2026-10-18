@@ -59,7 +59,12 @@ public final class TokenSnapshotCodec {
         } catch (Exception ex) { throw new IllegalStateException("Invalid OAuth2 authorization snapshot"); }
     }
     public static Instant effectiveExpiration(OAuth2AuthorizedClient client) {
-        return client.getRefreshToken() != null ? client.getRefreshToken().getExpiresAt() : client.getAccessToken().getExpiresAt();
+        Instant accessExpires = client.getAccessToken().getExpiresAt();
+        if (client.getRefreshToken() == null) return accessExpires;
+        Instant refreshExpires = client.getRefreshToken().getExpiresAt();
+        // Retain the authorization while either token can still be used.
+        if (accessExpires == null || refreshExpires == null) return null;
+        return accessExpires.isAfter(refreshExpires) ? accessExpires : refreshExpires;
     }
     public static void text(DataOutputStream out, String value) throws IOException {
         byte[] data = value.getBytes(StandardCharsets.UTF_8);

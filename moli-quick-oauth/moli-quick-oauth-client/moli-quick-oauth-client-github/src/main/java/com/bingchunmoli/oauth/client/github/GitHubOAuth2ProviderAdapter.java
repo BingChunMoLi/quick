@@ -30,7 +30,12 @@ public final class GitHubOAuth2ProviderAdapter implements OAuth2ProviderAdapter 
         var converter = new OAuth2AccessTokenResponseHttpMessageConverter();
         var nativeConverter = new DefaultMapOAuth2AccessTokenResponseConverter();
         converter.setAccessTokenResponseConverter(parameters -> {
-            var response = nativeConverter.convert(parameters);
+            Map<String, Object> normalized = new LinkedHashMap<>(parameters);
+            if (parameters.get(OAuth2ParameterNames.SCOPE) instanceof String scope) {
+                // GitHub returns comma-separated scopes; Spring expects the OAuth space delimiter.
+                normalized.put(OAuth2ParameterNames.SCOPE, scope.replace(',', ' '));
+            }
+            var response = nativeConverter.convert(normalized);
             Map<String, Object> extras = new LinkedHashMap<>(response.getAdditionalParameters());
             if (!parameters.containsKey("expires_in")) extras.put("quick_non_expiring_access", true);
             return OAuth2AccessTokenResponse.withResponse(response).additionalParameters(extras).build();

@@ -12,6 +12,41 @@ import org.springframework.security.oauth2.core.endpoint.OAuth2AccessTokenRespon
 import static org.assertj.core.api.Assertions.*;
 
 class OAuth2CoreTest {
+    @Test void storageExpirationNeverDiscardsAStillUsableAccessToken() {
+        Instant now = Instant.now();
+        var registration = registration();
+        var refresh = new OAuth2RefreshToken("refresh", now.minusSeconds(100), now.plusSeconds(30));
+        assertThat(TokenSnapshotCodec.effectiveExpiration(client(registration, now.plusSeconds(300), refresh)))
+                .isEqualTo(now.plusSeconds(300));
+        assertThat(TokenSnapshotCodec.effectiveExpiration(client(registration, null, refresh))).isNull();
+        assertThat(TokenSnapshotCodec.effectiveExpiration(client(registration, now.plusSeconds(300),
+                new OAuth2RefreshToken("refresh", now)))).isNull();
+    }
+    @Test void expiredRefreshDoesNotInvalidateAnAccessTokenWithinTheRefreshSkew() {
+        var registration = registration();
+        var registrations = new InMemoryClientRegistrationRepository(registration);
+        var service = new InMemoryOAuth2AuthorizedClientService(registrations);
+        var original = client(registration, Instant.now().plusSeconds(30),
+                new OAuth2RefreshToken("expired-refresh", Instant.now().minusSeconds(100), Instant.now().minusSeconds(1)));
+        service.saveAuthorizedClient(original, QuickOAuth2Client.principal("external-user"));
+        AtomicInteger refreshAttempts = new AtomicInteger();
+        var provider = OAuth2AuthorizedClientProviderBuilder.builder().refreshToken(refresh ->
+                refresh.accessTokenResponseClient(request -> {
+                    refreshAttempts.incrementAndGet();
+                    throw new OAuth2AuthorizationException(new OAuth2Error("invalid_grant"));
+                })).build();
+        var coordinator = new LocalRefreshCoordinator(Duration.ofSeconds(1));
+        var quick = new QuickOAuth2Client(new CoordinatedAuthorizedClientManager(registrations, service, provider, coordinator), service, coordinator);
+        assertThat(quick.authorize(new AuthorizedClientRef("test", "external-user")).getAccessToken()).isSameAs(original.getAccessToken());
+        assertThat(refreshAttempts).hasValue(0);
+        assertThat(((OAuth2AuthorizedClient) service.loadAuthorizedClient("test", "external-user")).getAccessToken()).isSameAs(original.getAccessToken());
+        service.saveAuthorizedClient(client(registration, Instant.now().minusSeconds(1), original.getRefreshToken()),
+                QuickOAuth2Client.principal("external-user"));
+        assertThatThrownBy(() -> quick.authorize(new AuthorizedClientRef("test", "external-user")))
+                .isInstanceOf(AuthorizationRequiredException.class);
+        assertThat((OAuth2AuthorizedClient) service.loadAuthorizedClient("test", "external-user")).isNull();
+        assertThat(refreshAttempts).hasValue(0);
+    }
     static ClientRegistration registration() {
         return ClientRegistration.withRegistrationId("test").clientId("client").clientSecret("do-not-persist")
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
@@ -31,7 +66,7 @@ class OAuth2CoreTest {
         assertThat(restored.getAccessToken().getExpiresAt()).isNull();
         assertThat(restored.getRefreshToken().getExpiresAt()).isEqualTo(refresh.getExpiresAt());
         assertThat(new String(Base64.getDecoder().decode(encoded), java.nio.charset.StandardCharsets.UTF_8)).doesNotContain("do-not-persist");
-        assertThat(TokenSnapshotCodec.effectiveExpiration(restored)).isEqualTo(refresh.getExpiresAt());
+        assertThat(TokenSnapshotCodec.effectiveExpiration(restored)).isNull();
         assertThat(TokenSnapshotCodec.key(new AuthorizedClientRef("a:b", "c")))
                 .isNotEqualTo(TokenSnapshotCodec.key(new AuthorizedClientRef("a", "b:c")));
         assertThatThrownBy(() -> TokenSnapshotCodec.decode("broken", id -> registration)).hasMessage("Invalid OAuth2 authorization snapshot");
@@ -84,6 +119,24 @@ class OAuth2CoreTest {
                 .hasMessage("OAuth2 authorization is required").hasNoCause();
         assertThat((OAuth2AuthorizedClient) service.loadAuthorizedClient("test", "external-user")).isNull();
     }
+    @Test void invalidGrantFromACustomProviderAlsoRemovesTheFailedAuthorization() {
+        var registration = registration();
+        var registrations = new InMemoryClientRegistrationRepository(registration);
+        var service = new InMemoryOAuth2AuthorizedClientService(registrations);
+        var expired = client(registration, Instant.now().minusSeconds(1), new OAuth2RefreshToken("refresh", Instant.now().minusSeconds(100)));
+        service.saveAuthorizedClient(expired, QuickOAuth2Client.principal("external-user"));
+        service.saveAuthorizedClient(new OAuth2AuthorizedClient(registration, "another-user", expired.getAccessToken()),
+                QuickOAuth2Client.principal("another-user"));
+        var coordinator = new LocalRefreshCoordinator(Duration.ofSeconds(1));
+        var manager = new CoordinatedAuthorizedClientManager(registrations, service, context -> {
+            throw new OAuth2AuthorizationException(new OAuth2Error("invalid_grant", "sensitive-provider-description", null));
+        }, coordinator);
+        var quick = new QuickOAuth2Client(manager, service, coordinator);
+        assertThatThrownBy(() -> quick.authorize(new AuthorizedClientRef("test", "external-user")))
+                .hasMessage("OAuth2 authorization is required").hasNoCause();
+        assertThat((OAuth2AuthorizedClient) service.loadAuthorizedClient("test", "external-user")).isNull();
+        assertThat((OAuth2AuthorizedClient) service.loadAuthorizedClient("test", "another-user")).isNotNull();
+    }
     @Test void tokenResponseMetadataIsAppliedOnce() {
         var registration = registration();
         var response = OAuth2AccessTokenResponse.withToken("access").tokenType(OAuth2AccessToken.TokenType.BEARER)
@@ -94,6 +147,24 @@ class OAuth2CoreTest {
         assertThat(normalized.getAccessToken().getExpiresAt()).isNull();
         assertThat(normalized.getRefreshToken().getExpiresAt()).isEqualTo(response.getRefreshToken().getIssuedAt().plusSeconds(800));
         assertThat(TokenResponseMetadata.applyAndClear(original)).isSameAs(original);
+    }
+    @Test void anErrorForAnotherRegistrationCannotDeleteItsStoredAuthorization() {
+        var requested = registration();
+        var other = ClientRegistration.withRegistrationId("other").clientId("client")
+                .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS).tokenUri("https://provider/token").build();
+        var registrations = new InMemoryClientRegistrationRepository(requested, other);
+        var service = new InMemoryOAuth2AuthorizedClientService(registrations);
+        service.saveAuthorizedClient(client(requested, Instant.now().minusSeconds(1), null), QuickOAuth2Client.principal("external-user"));
+        service.saveAuthorizedClient(client(other, Instant.now().plusSeconds(100), null), QuickOAuth2Client.principal("external-user"));
+        var coordinator = new LocalRefreshCoordinator(Duration.ofSeconds(1));
+        var manager = new CoordinatedAuthorizedClientManager(registrations, service, context -> {
+            throw new ClientAuthorizationException(new OAuth2Error("invalid_grant"), "other");
+        }, coordinator);
+        var quick = new QuickOAuth2Client(manager, service, coordinator);
+        assertThatThrownBy(() -> quick.authorize(new AuthorizedClientRef("test", "external-user")))
+                .isInstanceOf(AuthorizationRequiredException.class);
+        assertThat((OAuth2AuthorizedClient) service.loadAuthorizedClient("test", "external-user")).isNotNull();
+        assertThat((OAuth2AuthorizedClient) service.loadAuthorizedClient("other", "external-user")).isNotNull();
     }
     @Test void duplicateChannelIdsFailInsteadOfDependingOnDiscoveryOrder() {
         OAuth2ProviderAdapter adapter = () -> "duplicate";
