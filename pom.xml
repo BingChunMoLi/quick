@@ -33,6 +33,7 @@
         <module>moli-quick-mybatis-plus-generate</module>
         <module>moli-quick-codegen</module>
         <module>moli-quick-object-storage</module>
+        <module>moli-quick-oauth</module>
         <module>moli-quick-idempotency-spring-boot-starter</module>
         <module>moli-quick-rate-limit-spring-boot-starter</module>
         <module>moli-quick-web-spring-boot-starter</module>
@@ -72,6 +73,12 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-core</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-spring-boot-autoconfigure</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-spring-boot-starter</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-github</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-jdbc</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-redis</artifactId><version>${project.version}</version></dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>

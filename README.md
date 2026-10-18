@@ -87,6 +87,10 @@ Spring Boot 启动会记录 WARN 日志，提示生产环境必须更换强密�
 </dependency>
 ```
 
+## moli-quick-oauth
+
+OAuth2 登录与授权 API 调用见 [OAuth Client 模块](moli-quick-oauth/README.md)，支持按需组合 GitHub 渠道和 JDBC/Redis 存储。
+
 ## moli-quick-object-storage
 
 按需选择一个 Provider（`oss`、`obs`、`cos` 或 `s3`），业务代码统一注入

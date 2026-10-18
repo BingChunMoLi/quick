@@ -1,0 +1,2 @@
+com.bingchunmoli.oauth.client.autoconfigure.QuickOAuth2AutoConfiguration
+com.bingchunmoli.oauth.client.autoconfigure.QuickOAuth2WebAutoConfiguration

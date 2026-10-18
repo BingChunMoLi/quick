@@ -1,0 +1,2 @@
+com.bingchunmoli.oauth.client.redis.RedisOAuth2AutoConfiguration
+com.bingchunmoli.oauth.client.redis.RedisOAuth2WebAutoConfiguration

@@ -22,6 +22,8 @@ public class JwtSessionStoreFactory {
 
     private static final String REDIS_TEMPLATE_CLASS_NAME = "org.springframework.data.redis.core.RedisTemplate";
 
+    private static final String REDIS_STORE_CLASS_NAME = "com.bingchunmoli.security.jwt.RedisJwtSessionStore";
+
     private final ListableBeanFactory beanFactory;
 
     public JwtSessionStoreFactory(ListableBeanFactory beanFactory) {
@@ -34,12 +36,15 @@ public class JwtSessionStoreFactory {
             return new InMemoryJwtSessionStore();
         }
         try {
+            if (REDIS_STORE_CLASS_NAME.equals(className)) {
+                if (!ClassUtils.isPresent(REDIS_TEMPLATE_CLASS_NAME, getClass().getClassLoader())) {
+                    throw new IllegalStateException("RedisJwtSessionStore requires Spring Data Redis");
+                }
+                return new RedisSupport(beanFactory).create(properties);
+            }
             Class<?> storeClass = ClassUtils.forName(className, getClass().getClassLoader());
             if (!JwtSessionStore.class.isAssignableFrom(storeClass)) {
                 throw new IllegalArgumentException(className + " must implement " + JwtSessionStore.class.getName());
-            }
-            if (RedisJwtSessionStore.class.getName().equals(className)) {
-                return new RedisJwtSessionStore(resolveRequiredRedisTemplate(), properties);
             }
             return instantiate(storeClass.asSubclass(JwtSessionStore.class), properties);
         } catch (ReflectiveOperationException ex) {
@@ -62,45 +67,58 @@ public class JwtSessionStoreFactory {
         throw new IllegalStateException("No supported constructor found for " + storeClass.getName());
     }
 
-    private RedisTemplate<String, Object> resolveRequiredRedisTemplate() throws ReflectiveOperationException {
-        RedisTemplate<String, Object> redisTemplate = resolveRedisTemplateFromRedisUtil();
-        if (redisTemplate != null) {
-            return redisTemplate;
-        }
-        redisTemplate = resolveRedisTemplateBean();
-        if (redisTemplate != null) {
-            return redisTemplate;
-        }
-        throw new IllegalStateException("RedisJwtSessionStore requires RedisUtil or RedisTemplate bean");
-    }
+    /** Keep optional Redis types out of the outer factory's reflective method signatures. */
+    private static final class RedisSupport {
+        private final ListableBeanFactory beanFactory;
 
-    @SuppressWarnings("unchecked")
-    private RedisTemplate<String, Object> resolveRedisTemplateFromRedisUtil() throws ReflectiveOperationException {
-        if (!ClassUtils.isPresent(REDIS_UTIL_CLASS_NAME, getClass().getClassLoader())) {
-            return null;
+        private RedisSupport(ListableBeanFactory beanFactory) {
+            this.beanFactory = beanFactory;
         }
-        Class<?> redisUtilClass = ClassUtils.forName(REDIS_UTIL_CLASS_NAME, getClass().getClassLoader());
-        String[] beanNames = beanFactory.getBeanNamesForType(redisUtilClass);
-        if (beanNames.length == 0) {
-            return null;
-        }
-        Object redisUtil = beanFactory.getBean(beanNames[0]);
-        Field redisTemplateField = redisUtilClass.getField("redisTemplate");
-        Object value = redisTemplateField.get(redisUtil);
-        if (value instanceof RedisTemplate<?, ?> template) {
-            return (RedisTemplate<String, Object>) template;
-        }
-        throw new IllegalStateException("RedisUtil.redisTemplate must be a RedisTemplate");
-    }
 
-    @SuppressWarnings("unchecked")
-    private RedisTemplate<String, Object> resolveRedisTemplateBean() throws ClassNotFoundException {
-        if (!ClassUtils.isPresent(REDIS_TEMPLATE_CLASS_NAME, getClass().getClassLoader())) {
-            return null;
+        private JwtSessionStore create(JwtTokenProperties properties) throws ReflectiveOperationException {
+            return new RedisJwtSessionStore(resolveRequiredRedisTemplate(), properties);
         }
-        Class<?> redisTemplateClass = ClassUtils.forName(REDIS_TEMPLATE_CLASS_NAME, getClass().getClassLoader());
-        String[] beanNames = beanFactory.getBeanNamesForType(redisTemplateClass);
-        return beanNames.length == 0 ? null : (RedisTemplate<String, Object>) beanFactory.getBean(beanNames[0]);
+
+        private RedisTemplate<String, Object> resolveRequiredRedisTemplate() throws ReflectiveOperationException {
+            RedisTemplate<String, Object> redisTemplate = resolveRedisTemplateFromRedisUtil();
+            if (redisTemplate != null) {
+                return redisTemplate;
+            }
+            redisTemplate = resolveRedisTemplateBean();
+            if (redisTemplate != null) {
+                return redisTemplate;
+            }
+            throw new IllegalStateException("RedisJwtSessionStore requires RedisUtil or RedisTemplate bean");
+        }
+
+        @SuppressWarnings("unchecked")
+        private RedisTemplate<String, Object> resolveRedisTemplateFromRedisUtil() throws ReflectiveOperationException {
+            if (!ClassUtils.isPresent(REDIS_UTIL_CLASS_NAME, getClass().getClassLoader())) {
+                return null;
+            }
+            Class<?> redisUtilClass = ClassUtils.forName(REDIS_UTIL_CLASS_NAME, getClass().getClassLoader());
+            String[] beanNames = beanFactory.getBeanNamesForType(redisUtilClass);
+            if (beanNames.length == 0) {
+                return null;
+            }
+            Object redisUtil = beanFactory.getBean(beanNames[0]);
+            Field redisTemplateField = redisUtilClass.getField("redisTemplate");
+            Object value = redisTemplateField.get(redisUtil);
+            if (value instanceof RedisTemplate<?, ?> template) {
+                return (RedisTemplate<String, Object>) template;
+            }
+            throw new IllegalStateException("RedisUtil.redisTemplate must be a RedisTemplate");
+        }
+
+        @SuppressWarnings("unchecked")
+        private RedisTemplate<String, Object> resolveRedisTemplateBean() throws ClassNotFoundException {
+            if (!ClassUtils.isPresent(REDIS_TEMPLATE_CLASS_NAME, getClass().getClassLoader())) {
+                return null;
+            }
+            Class<?> redisTemplateClass = ClassUtils.forName(REDIS_TEMPLATE_CLASS_NAME, getClass().getClassLoader());
+            String[] beanNames = beanFactory.getBeanNamesForType(redisTemplateClass);
+            return beanNames.length == 0 ? null : (RedisTemplate<String, Object>) beanFactory.getBean(beanNames[0]);
+        }
     }
 
     private Constructor<? extends JwtSessionStore> findConstructor(Class<? extends JwtSessionStore> storeClass,
