@@ -77,6 +77,9 @@
             <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-spring-boot-autoconfigure</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-spring-boot-starter</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-github</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-qq</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-wechat</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-google</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-jdbc</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-redis</artifactId><version>${project.version}</version></dependency>
             <dependency>

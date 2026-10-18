@@ -1,6 +1,13 @@
 # OAuth Client Quick Starter
 
-Java 17 / Spring Boot 4.1，基于 Spring Security OAuth2。首版包含浏览器授权码登录、OIDC、用户授权 API 调用、后台 `client_credentials`、GitHub.com OAuth App，以及可选 JDBC / Redis 存储。
+[项目总览](../README.md)
+
+当前源码版本 `1.0.13-bate`，Java 17 / Spring Boot 依赖管理 4.1.0；下方省略版本的依赖示例需先导入项目总览中的 Quick BOM。
+
+
+Java 17 / Spring Boot 4.1，基于 Spring Security OAuth2。包含浏览器授权码登录、OIDC、用户授权 API 调用、后台 `client_credentials`、GitHub.com OAuth App、QQ、微信网站扫码/公众号网页授权、Google OIDC，以及可选 JDBC / Redis 存储。
+
+QQ、微信和 Google 的依赖、完整配置、身份规则及手工验证见 [渠道接入说明](CHANNELS.md)。这些渠道按需添加，继续复用下方宿主安全链和登录处理器。
 
 ## 依赖与最小接入
 
@@ -143,7 +150,7 @@ GitHub 默认 scope 为 `read:user`，自动使用 S256 PKCE。`moli.oauth.clien
 
 同一渠道的多个 registration 可配置 `provider: github`。使用宿主自定义 registration 仓库时，可通过 `moli.oauth.client.provider-mappings.<registrationId>: github` 指定适配器。
 
-QQ、微信等新渠道创建独立模块，实现 `OAuth2ProviderAdapter` 并注册 Bean；通过 AutoConfiguration.imports 注册，适配默认端点、请求参数、Token 转换、用户服务和身份映射。无需修改 Core 或 Starter。适配器 ID 必须唯一，显式配置覆盖渠道默认值。通用 OAuth2/OIDC 可直接使用原生端点/issuer 配置，不必创建渠道模块。
+其他新渠道创建独立模块，实现 `OAuth2ProviderAdapter` 并注册 Bean；通过 AutoConfiguration.imports 注册，适配默认端点、请求参数、Token 转换、用户服务和身份映射。可通过 `validateRegistration` 校验渠道特定配置。自动配置应声明在 `QuickOAuth2AutoConfiguration` 之前执行。适配器 ID 必须唯一，显式配置覆盖渠道默认值。通用 OAuth2/OIDC 可直接使用原生端点/issuer 配置，不必创建渠道模块。
 
 可替换原生 registration/service/manager/provider Bean；Web 用户服务分别使用 Bean 名 `quickOAuth2UserService`、`quickOidcUserService`，失败处理器使用 `quickOAuth2FailureHandler`。保留 OIDC 原生用户及 ID Token。宿主声明对应泛型的 `OAuth2AccessTokenResponseClient` Bean，可分别覆盖授权码、刷新和应用授权的 Token 客户端，优先于渠道默认值；只覆盖一个授权类型时，其他类型仍使用渠道或 Spring 默认实现。自定义 `ProviderTokenClients` 或渠道 Token 客户端可复用宿主 HTTP 配置，并负责保留所需的渠道 Token 转换行为。
 
@@ -162,9 +169,15 @@ OAUTH_TEST_REDIS_PORT=6379
 ```
 
 ```bash
-mvn -B -ntp -pl :moli-quick-oauth-client-github,:moli-quick-oauth-client-jdbc,:moli-quick-oauth-client-redis,:moli-quick-oauth-client-spring-boot-starter -am -Poauth-it -Dgpg.skip=true -Dmaven.javadoc.skip=true verify
+mvn -B -ntp -pl :moli-quick-oauth-client-github,:moli-quick-oauth-client-qq,:moli-quick-oauth-client-wechat,:moli-quick-oauth-client-google,:moli-quick-oauth-client-jdbc,:moli-quick-oauth-client-redis,:moli-quick-oauth-client-spring-boot-starter -am -Poauth-it -Dgpg.skip=true -Dmaven.javadoc.skip=true verify
 ```
 
 上述命令使用 JDK 17；本仓库使用 JDK 23+ 构建时额外添加 `-Dmaven.compiler.proc=full` 以启用现有模块的注解处理。JDBC 测试要求授权表不存在，创建成功后才负责删除；Redis 测试使用独立随机授权标识，不执行 FLUSHDB。CI 提供真实 MySQL/PostgreSQL/Redis 服务。
 
 手工冒烟：创建 GitHub OAuth App、设置回调和环境变量、启动宿主、访问授权入口；检查成功回调数字 ID、宿主登录响应和服务端 API 调用。再切换 Redis 临时状态及 STATELESS，确认浏览器没有 JSESSIONID，重放回调失败；分别验证长期令牌和启用过期令牌的 App。不要将真实密钥或 Token 提交到仓库。
+
+## 子模块 README 导航
+
+| 模块 | 用途 |
+| --- | --- |
+| [moli-quick-oauth-client](moli-quick-oauth-client/README.md) | 客户端聚合与子模块导航 |

@@ -1,5 +1,10 @@
 # moli-quick-web-spring-boot-starter
 
+[项目总览](../README.md)
+
+当前源码版本 `1.0.13-bate`，Java 17 / Spring Boot 依赖管理 4.1.0；下方省略版本的依赖示例需先导入项目总览中的 Quick BOM。
+
+
 可复用的 Spring MVC 基础 Starter，提供统一错误响应、参数校验处理和请求链路 ID。
 
 ## 引入依赖
@@ -93,3 +98,11 @@ moli:
 
 Starter 不会默认配置 CORS、打印请求体或自动包装正常响应，这些行为通常涉及安全策略或既有接口协议，
 应由业务应用显式决定。
+
+## 宿主集成与边界
+
+本模块面向 Servlet Spring MVC，不是 WebFlux 错误处理器。`ApiException`、`WebExceptionResponseFactory` 位于 `com.bingchunmoli.web.exception`；请求 ID 配置见 [QuickWebProperties](src/main/java/com/bingchunmoli/web/autoconfigure/QuickWebProperties.java)。
+
+自定义正常响应继续由 Controller 返回；已有 ControllerAdvice 与本模块的优先级需明确协调。客户端请求 ID 是跟踪信息，不作为身份或授权依据。默认隐藏未处理异常的内部消息，需要调试时显式启用 include-exception-message。
+
+引入 [幂等](../moli-quick-idempotency-spring-boot-starter/README.md) 或 [限流](../moli-quick-rate-limit-spring-boot-starter/README.md) 时分别适配 409/429；仅引入 Web Starter 不会启用这些方法切面。

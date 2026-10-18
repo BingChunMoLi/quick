@@ -18,6 +18,9 @@ import org.springframework.security.oauth2.client.registration.*;
 /** Runs before Boot's native registration/service defaults, but honors host beans. */
 @AutoConfiguration(before = OAuth2ClientAutoConfiguration.class,
         afterName = {"com.bingchunmoli.oauth.client.github.GitHubOAuth2AutoConfiguration",
+                "com.bingchunmoli.oauth.client.qq.QqOAuth2AutoConfiguration",
+                "com.bingchunmoli.oauth.client.wechat.WeChatOAuth2AutoConfiguration",
+                "com.bingchunmoli.oauth.client.google.GoogleOAuth2AutoConfiguration",
                 "com.bingchunmoli.oauth.client.jdbc.JdbcOAuth2AutoConfiguration",
                 "com.bingchunmoli.oauth.client.redis.RedisOAuth2AutoConfiguration"})
 @ConditionalOnProperty(prefix = "moli.oauth.client", name = "enabled", havingValue = "true")
@@ -56,16 +59,29 @@ public class QuickOAuth2AutoConfiguration {
             String providerId = registration.getProvider() == null ? id : registration.getProvider();
             var provider = properties.getProvider().computeIfAbsent(providerId, key -> new OAuth2ClientProperties.Provider());
             registration.setProvider(providerId);
-            if (provider.getAuthorizationUri() == null) provider.setAuthorizationUri(d.get("authorization-uri"));
-            if (provider.getTokenUri() == null) provider.setTokenUri(d.get("token-uri"));
-            if (provider.getUserInfoUri() == null) provider.setUserInfoUri(d.get("user-info-uri"));
+            boolean discovery = provider.getIssuerUri() != null;
+            // An explicit issuer selects native discovery. Channel defaults must not masquerade
+            // as explicit endpoint overrides when Boot applies the discovered metadata.
+            if (!discovery) {
+                if (provider.getAuthorizationUri() == null) provider.setAuthorizationUri(d.get("authorization-uri"));
+                if (provider.getTokenUri() == null) provider.setTokenUri(d.get("token-uri"));
+                if (provider.getUserInfoUri() == null) provider.setUserInfoUri(d.get("user-info-uri"));
+                if (provider.getJwkSetUri() == null) provider.setJwkSetUri(d.get("jwk-set-uri"));
+                if (registration.getClientAuthenticationMethod() == null) registration.setClientAuthenticationMethod(d.get("client-authentication-method"));
+            }
             if (provider.getUserNameAttribute() == null) provider.setUserNameAttribute(d.get("user-name-attribute"));
             if (registration.getAuthorizationGrantType() == null) registration.setAuthorizationGrantType(d.get("authorization-grant-type"));
-            if (registration.getClientAuthenticationMethod() == null) registration.setClientAuthenticationMethod(d.get("client-authentication-method"));
             if (registration.getRedirectUri() == null) registration.setRedirectUri(d.get("redirect-uri"));
             if (registration.getScope() == null && d.containsKey("scope")) registration.setScope(Set.of(d.get("scope").split(",")));
         });
         var registrations = new OAuth2ClientPropertiesMapper(properties).asClientRegistrations();
+        // A channel's static issuer default must not trigger discovery HTTP during startup.
+        registrations.replaceAll((id, registration) -> {
+            var adapter = registry.adapter(id);
+            String issuer = adapter == null ? null : adapter.defaults().get("issuer-uri");
+            return registration.getProviderDetails().getIssuerUri() == null && issuer != null
+                    ? ClientRegistration.withClientRegistration(registration).issuerUri(issuer).build() : registration;
+        });
         if (registrations.isEmpty()) throw new IllegalStateException("At least one OAuth2 client registration is required");
         registrations.values().forEach(registration -> validateRegistration(registration, registry));
         return new InMemoryClientRegistrationRepository(registrations);
@@ -95,6 +111,7 @@ public class QuickOAuth2AutoConfiguration {
         if (!supported.contains(registration.getAuthorizationGrantType())) {
             throw new IllegalStateException("Unsupported grant type for OAuth2 registration: " + registration.getRegistrationId());
         }
+        if (adapter != null) adapter.validateRegistration(registration);
     }
 
     @Bean @ConditionalOnMissingBean(OAuth2AuthorizedClientService.class)

@@ -1,5 +1,10 @@
 # moli-quick-rate-limit-spring-boot-starter
 
+[项目总览](../README.md)
+
+当前源码版本 `1.0.13-bate`，Java 17 / Spring Boot 依赖管理 4.1.0；下方省略版本的依赖示例需先导入项目总览中的 Quick BOM。
+
+
 基于注解的 Spring Boot 方法限流 Starter，提供固定窗口算法，支持单机内存、Redis 和自定义存储实现。
 
 ## 引入依赖
@@ -88,3 +93,9 @@ RateLimitStore databaseRateLimitStore() {
 
 当前内置算法是固定窗口。它实现简单、开销低，但窗口边界附近可能出现短时流量突增；需要更平滑的
 限流效果时，可以提供自定义 `RateLimitStore` 实现令牌桶或滑动窗口。
+
+## 代理调用与接入边界
+
+注解类型为 `com.bingchunmoli.ratelimit.annotation.RateLimit`，需经过 Spring 代理；同类内部调用不生效。Redis 模式由宿主提供 StringRedisTemplate，内存模式不在多个实例之间共享限额。
+
+将示例 key 写为 `#p0` 可避免依赖编译器参数名保留配置。限流仅限制方法调用，不自动按登录用户/IP 分组；分组维度由 key 明确指定。与幂等同时使用时默认限流先执行，重复请求也可能消耗窗口额度。HTTP 429 映射由 [Web Starter](../moli-quick-web-spring-boot-starter/README.md) 或宿主异常处理器负责。

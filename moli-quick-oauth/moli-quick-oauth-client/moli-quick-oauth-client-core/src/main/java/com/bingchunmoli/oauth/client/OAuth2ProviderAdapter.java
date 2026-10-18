@@ -20,6 +20,8 @@ public interface OAuth2ProviderAdapter {
         return Set.of(AuthorizationGrantType.AUTHORIZATION_CODE, AuthorizationGrantType.CLIENT_CREDENTIALS);
     }
     default void customizeAuthorization(OAuth2AuthorizationRequest.Builder request) { }
+    /** Validate channel-specific invariants, including for host-supplied registrations. */
+    default void validateRegistration(ClientRegistration registration) { }
     default OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> authorizationCodeClient() { return null; }
     default OAuth2AccessTokenResponseClient<OAuth2RefreshTokenGrantRequest> refreshTokenClient() { return null; }
     default OAuth2UserService<OAuth2UserRequest, OAuth2User> userService() { return null; }

@@ -1,5 +1,10 @@
 # moli-quick-idempotency-spring-boot-starter
 
+[项目总览](../README.md)
+
+当前源码版本 `1.0.13-bate`，Java 17 / Spring Boot 依赖管理 4.1.0；下方省略版本的依赖示例需先导入项目总览中的 Quick BOM。
+
+
 基于注解的 Spring Boot 方法幂等 Starter，支持单机内存、Redis 和自定义存储实现。
 
 ## 引入依赖
@@ -82,3 +87,9 @@ IdempotencyStore databaseIdempotencyStore() {
 
 目前直接支持同步返回值和 `CompletionStage`。Reactor `Mono`/`Flux` 等惰性流需要独立的
 订阅生命周期适配，不应直接套用同步切面。
+
+## 代理调用与接入边界
+
+注解类型为 `com.bingchunmoli.idempotency.annotation.Idempotent`，需作用于 Spring 管理的可代理方法；同类内部调用不经过切面。内存存储不跨实例共享；Redis 模式由宿主提供 StringRedisTemplate（例如使用 Boot Redis Starter）。默认不缓存或重放上一次业务响应，重复请求抛出异常，由业务或 [Web Starter](../moli-quick-web-spring-boot-starter/README.md) 转为响应。
+
+与限流组合时，默认限流切面顺序在幂等之前，重复请求也可能计入限额；可按业务调整 order。幂等 TTL 需覆盖业务执行时间，TTL 到期后可能接受新请求，不提供数据库事务的恰好一次提交保证。

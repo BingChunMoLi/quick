@@ -10,6 +10,9 @@
         <module>moli-quick-oauth-client-spring-boot-autoconfigure</module>
         <module>moli-quick-oauth-client-spring-boot-starter</module>
         <module>moli-quick-oauth-client-github</module>
+        <module>moli-quick-oauth-client-qq</module>
+        <module>moli-quick-oauth-client-wechat</module>
+        <module>moli-quick-oauth-client-google</module>
         <module>moli-quick-oauth-client-jdbc</module>
         <module>moli-quick-oauth-client-redis</module>
     </modules>

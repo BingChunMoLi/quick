@@ -1,5 +1,10 @@
 # Quick 统一代码生成器
 
+[项目总览](../README.md)
+
+当前源码版本 `1.0.13-bate`，Java 17 / Spring Boot 依赖管理 4.1.0；下方省略版本的依赖示例需先导入项目总览中的 Quick BOM。
+
+
 通过同一套 JDBC 元数据和 FreeMarker 模板，生成原生 MyBatis 或 MyBatis-Plus 后端代码。支持 MySQL、PostgreSQL；浏览器、CLI、Maven 插件共享 YAML 配置。
 
 ## 构建和独立运行
@@ -189,3 +194,13 @@ mvn -f moli-quick-codegen/moli-quick-codegen-core/pom.xml verify -Pdatabase-it -
 ```
 
 集成测试对两种数据库和两种 ORM 验证真实元数据、自增主键回填、金额、中文 LIKE、数据库生成列、分页总数、空更新及 CRUD。省略测试数据库 URL 时显式失败，不静默跳过。
+
+## 子模块 README 导航
+
+| 模块 | 用途 |
+| --- | --- |
+| [moli-quick-codegen-core](moli-quick-codegen-core/README.md) | 非 Spring 内核、JDBC 元数据、FreeMarker 模板 |
+| [moli-quick-codegen-cli](moli-quick-codegen-cli/README.md) | 可执行 JAR，tables/preview/generate |
+| [moli-quick-codegen-maven-plugin](moli-quick-codegen-maven-plugin/README.md) | Maven goals，手动生成到项目 |
+| [moli-quick-codegen-spring-boot-starter](moli-quick-codegen-spring-boot-starter/README.md) | 嵌入 API/UI，默认关闭 |
+| [moli-quick-codegen-app](moli-quick-codegen-app/README.md) | 本机独立 UI，127.0.0.1:8088 |

@@ -22,7 +22,18 @@ public final class ServiceAuthorizedClientRepository implements OAuth2Authorized
         var ref = new AuthorizedClientRef(client.getClientRegistration().getRegistrationId(), client.getPrincipalName());
         try (var lease = coordinator.acquire(ref)) {
             lease.checkOwned();
-            service.saveAuthorizedClient(TokenResponseMetadata.applyAndClear(client), principal);
+            OAuth2AuthorizedClient normalized = TokenResponseMetadata.applyAndClear(client);
+            // Providers such as Google may return a refresh token only on the first consent.
+            OAuth2AuthorizedClient previous = service.loadAuthorizedClient(ref.registrationId(), ref.principalName());
+            var refresh = normalized.getRefreshToken();
+            if (previous != null && previous.getRefreshToken() != null && (refresh == null ||
+                    refresh.getExpiresAt() == null && previous.getRefreshToken().getExpiresAt() != null &&
+                            refresh.getTokenValue().equals(previous.getRefreshToken().getTokenValue()))) {
+                normalized = new OAuth2AuthorizedClient(normalized.getClientRegistration(), normalized.getPrincipalName(),
+                        normalized.getAccessToken(), previous.getRefreshToken());
+            }
+            lease.checkOwned();
+            service.saveAuthorizedClient(normalized, principal);
         }
     }
     @Override public void removeAuthorizedClient(String id, Authentication principal,

@@ -1,5 +1,10 @@
 # moli-quick-object-storage
 
+[项目总览](../README.md)
+
+当前源码版本 `1.0.13-bate`，Java 17 / Spring Boot 依赖管理 4.1.0；下方省略版本的依赖示例需先导入项目总览中的 Quick BOM。
+
+
 面向 Spring Boot 的可插拔对象存储模块。业务代码只依赖统一的
 `ObjectStorageClient`，可以单独或同时使用阿里云 OSS、华为云 OBS、腾讯云 COS、
 Amazon S3 及其他 S3 兼容服务。
@@ -193,3 +198,14 @@ MultiCloudFileService(
 
 启用多个 Provider 后，直接注入单个无 `@Qualifier` 的 `ObjectStorageClient` 会产生歧义；
 此时应使用注册表或限定符。自定义某个 Provider 实现时，请使用对应的标准 Bean 名。
+
+## 子模块 README 导航
+
+| 模块 | 用途 |
+| --- | --- |
+| [moli-quick-object-storage-core](moli-quick-object-storage-core/README.md) | 无 Spring/厂商依赖的统一接口 |
+| [moli-quick-object-storage-spring-boot-autoconfigure](moli-quick-object-storage-spring-boot-autoconfigure/README.md) | 客户端注册表自动配置 |
+| [moli-quick-object-storage-oss](moli-quick-object-storage-oss/README.md) | 阿里云 OSS |
+| [moli-quick-object-storage-obs](moli-quick-object-storage-obs/README.md) | 华为云 OBS |
+| [moli-quick-object-storage-cos](moli-quick-object-storage-cos/README.md) | 腾讯云 COS |
+| [moli-quick-object-storage-s3](moli-quick-object-storage-s3/README.md) | Amazon S3 / S3 兼容服务 |

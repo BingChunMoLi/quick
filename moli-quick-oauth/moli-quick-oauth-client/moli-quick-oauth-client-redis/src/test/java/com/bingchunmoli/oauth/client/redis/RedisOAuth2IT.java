@@ -120,6 +120,28 @@ class RedisOAuth2IT {
             assertThat(((OAuth2AuthorizedClient) service.loadAuthorizedClient("test", principal)).getAccessToken().getExpiresAt()).isNull();
         } finally { service.removeAuthorizedClient("test", principal); }
     }
+    @Test void browserReloginPreservesRefreshAfterRedisServiceRestart() {
+        String principal = UUID.randomUUID().toString();
+        try (var coordinator = new RedisRefreshCoordinator(redis, Duration.ofSeconds(4), Duration.ofSeconds(10))) {
+            var service = new RedisOAuth2AuthorizedClientService(redis, registrations, coordinator);
+            try {
+                Instant now = Instant.now(), expiration = now.plusSeconds(600);
+                service.saveAuthorizedClient(client(principal, now.plusSeconds(30),
+                        new OAuth2RefreshToken("first-refresh", now, expiration)), QuickOAuth2Client.principal(principal));
+                var repository = new ServiceAuthorizedClientRepository(service, coordinator);
+                repository.saveAuthorizedClient(client(principal, now.plusSeconds(120), null), QuickOAuth2Client.principal(principal),
+                        new MockHttpServletRequest(), new MockHttpServletResponse());
+                var restarted = new RedisOAuth2AuthorizedClientService(redis, registrations, null);
+                OAuth2AuthorizedClient saved = restarted.loadAuthorizedClient("test", principal);
+                assertThat(saved.getAccessToken().getExpiresAt()).isEqualTo(now.plusSeconds(120));
+                assertThat(saved.getRefreshToken().getTokenValue()).isEqualTo("first-refresh");
+                assertThat(saved.getRefreshToken().getIssuedAt()).isEqualTo(now);
+                assertThat(saved.getRefreshToken().getExpiresAt()).isEqualTo(expiration);
+                assertThat(redis.getExpire(RedisOAuth2AuthorizedClientService.tokenKey(new AuthorizedClientRef("test", principal))))
+                        .isBetween(590L, 600L);
+            } finally { service.removeAuthorizedClient("test", principal); }
+        }
+    }
     @Test void separateInstancesCoordinateRefreshAndRenewLease() throws Exception {
         String principal = UUID.randomUUID().toString();
         try (var first = new RedisRefreshCoordinator(redis, Duration.ofSeconds(4), Duration.ofMillis(600));
