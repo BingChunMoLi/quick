@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+ <modelVersion>4.0.0</modelVersion>
+ <parent><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth</artifactId><version>1.0.13-bate</version></parent>
+ <artifactId>moli-quick-oauth-auth-server</artifactId>
+ <packaging>pom</packaging><modules><module>moli-quick-oauth-auth-server-core</module><module>moli-quick-oauth-auth-server-spring-boot-autoconfigure</module><module>moli-quick-oauth-auth-server-spring-boot-starter</module><module>moli-quick-oauth-auth-server-jdbc</module><module>moli-quick-oauth-auth-server-redis</module></modules>
+<profiles><profile><id>oauth-it</id><build><plugins><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-failsafe-plugin</artifactId><version>3.5.4</version><executions><execution><goals><goal>integration-test</goal><goal>verify</goal></goals></execution></executions></plugin></plugins></build></profile></profiles></project>

@@ -1,0 +1,11 @@
+moli:
+  oauth:
+    auth-server:
+      storage:
+        type: redis
+        key-prefix: quick:example:authorization
+spring:
+  data:
+    redis:
+      host: ${OAUTH_REDIS_HOST:127.0.0.1}
+      port: ${OAUTH_REDIS_PORT:6379}

@@ -1,4 +1,4 @@
-name: OAuth Client
+name: OAuth Client and Servers
 on:
   push:
     paths: ['moli-quick-oauth/**', 'pom.xml', 'moli-quick-dependencies/pom.xml', '.github/workflows/oauth-client.yml']
@@ -44,7 +44,7 @@ jobs:
           cache: maven
       - name: Unit, protocol and real storage integration tests
         env:
-          OAUTH_TEST_MYSQL_URL: 'jdbc:mysql://127.0.0.1:3306/oauth_test?allowPublicKeyRetrieval=true&useSSL=false'
+          OAUTH_TEST_MYSQL_URL: 'jdbc:mysql://127.0.0.1:3306/oauth_test?allowPublicKeyRetrieval=true&useSSL=false&preserveInstants=true&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true'
           OAUTH_TEST_MYSQL_USERNAME: root
           OAUTH_TEST_MYSQL_PASSWORD: test-only-password
           OAUTH_TEST_POSTGRESQL_URL: 'jdbc:postgresql://127.0.0.1:5432/oauth_test'
@@ -52,5 +52,20 @@ jobs:
           OAUTH_TEST_POSTGRESQL_PASSWORD: test-only-password
           OAUTH_TEST_REDIS_PORT: '6379'
         run: >-
-          mvn -B -ntp -pl :moli-quick-oauth-client-github,:moli-quick-oauth-client-qq,:moli-quick-oauth-client-wechat,:moli-quick-oauth-client-google,:moli-quick-oauth-client-jdbc,:moli-quick-oauth-client-redis,:moli-quick-oauth-client-spring-boot-starter
-          -am -Poauth-it -Dgpg.skip=true -Dmaven.javadoc.skip=true verify
+          mvn -B -ntp -pl :moli-quick-oauth-auth-server-spring-boot-starter,:moli-quick-oauth-resource-server-spring-boot-starter,:moli-quick-oauth-client-github,:moli-quick-oauth-client-qq,:moli-quick-oauth-client-wechat,:moli-quick-oauth-client-google,:moli-quick-oauth-client-jdbc,:moli-quick-oauth-client-redis,:moli-quick-oauth-client-spring-boot-starter
+          -am -Poauth-it -Dgpg.skip=true -Dmaven.javadoc.skip=true -Dmaven.compiler.proc=full verify
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Quick dependencies for independent examples
+        run: >-
+          mvn -B -ntp -pl :moli-quick-dependencies,:moli-quick-oauth-auth-server-spring-boot-starter -am
+          -DskipTests -Dgpg.skip=true -Dmaven.javadoc.skip=true -Dmaven.compiler.proc=full install
+      - name: Build and run independent OAuth applications
+        shell: bash
+        run: |
+          for app in authorization-server resource-server client; do
+            mvn -B -ntp -f "moli-quick-oauth/examples/$app/pom.xml" -Dmaven.compiler.proc=full verify
+          done
+          python moli-quick-oauth/examples/smoke.py

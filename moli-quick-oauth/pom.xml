@@ -9,5 +9,5 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
-    <modules><module>moli-quick-oauth-client</module></modules>
+    <modules><module>moli-quick-oauth-auth-server</module><module>moli-quick-oauth-resource-server</module><module>moli-quick-oauth-client</module></modules>
 </project>

@@ -1,0 +1,13 @@
+moli:
+  oauth:
+    auth-server:
+      storage:
+        type: jdbc
+spring:
+  datasource:
+    url: ${OAUTH_JDBC_URL}
+    username: ${OAUTH_JDBC_USERNAME}
+    password: ${OAUTH_JDBC_PASSWORD}
+  sql:
+    init:
+      mode: never

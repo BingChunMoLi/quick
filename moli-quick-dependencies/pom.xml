@@ -19,6 +19,14 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-resource-server-spring-boot-starter</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-resource-server-spring-boot-autoconfigure</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-resource-server-core</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-auth-server-redis</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-auth-server-jdbc</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-auth-server-spring-boot-starter</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-auth-server-spring-boot-autoconfigure</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-auth-server-core</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-core</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-spring-boot-autoconfigure</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-spring-boot-starter</artifactId><version>${project.version}</version></dependency>

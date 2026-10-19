@@ -1,13 +1,22 @@
-# OAuth Client Quick Starter
+# Quick OAuth
 
 [项目总览](../README.md)
 
 当前源码版本 `1.0.13-bate`，Java 17 / Spring Boot 依赖管理 4.1.0；下方省略版本的依赖示例需先导入项目总览中的 Quick BOM。
 
 
-Java 17 / Spring Boot 4.1，基于 Spring Security OAuth2。包含浏览器授权码登录、OIDC、用户授权 API 调用、后台 `client_credentials`、GitHub.com OAuth App、QQ、微信网站扫码/公众号网页授权、Google OIDC，以及可选 JDBC / Redis 存储。
+Java 17 / Spring Boot 4.1，基于 Spring Security OAuth2，分别提供 Client、Authorization Server 和 Resource Server。支持第三方登录、标准授权/OIDC、JWT/opaque API 鉴权，以及按需选择的 JDBC / Redis 存储。三个角色分别启用、按应用职责组合。
 
 QQ、微信和 Google 的依赖、完整配置、身份规则及手工验证见 [渠道接入说明](CHANNELS.md)。这些渠道按需添加，继续复用下方宿主安全链和登录处理器。
+
+## 模块导航
+
+- [OAuth Client](moli-quick-oauth-client/README.md)：第三方登录与授权 API。
+- [Authorization Server](moli-quick-oauth-auth-server/README.md)：标准授权/OIDC、JWT/opaque 签发、内存/JDBC/Redis。
+- [Resource Server](moli-quick-oauth-resource-server/README.md)：JWT/opaque API 鉴权。
+- [独立三个应用](examples/README.md)：按 JAR 接入并执行真实 HTTP 联调。
+
+以下保留现有 OAuth Client 完整指南；授权端/资源端的配置和安全链见各自模块文档。
 
 ## 依赖与最小接入
 

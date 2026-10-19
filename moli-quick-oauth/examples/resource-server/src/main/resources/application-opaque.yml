@@ -1,0 +1,14 @@
+server:
+  port: 9013
+moli:
+  oauth:
+    resource-server:
+      mode: opaque
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        opaquetoken:
+          introspection-uri: ${AUTH_ISSUER:http://127.0.0.1:9010}/oauth2/introspect
+          client-id: machine
+          client-secret: ${OAUTH_INTROSPECTION_SECRET}

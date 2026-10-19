@@ -1,0 +1,15 @@
+server:
+  address: 127.0.0.1
+  port: 9011
+moli:
+  oauth:
+    resource-server:
+      enabled: true
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${AUTH_ISSUER:http://127.0.0.1:9010}
+          jwk-set-uri: ${AUTH_ISSUER:http://127.0.0.1:9010}/oauth2/jwks
+          audiences: [quick-api]

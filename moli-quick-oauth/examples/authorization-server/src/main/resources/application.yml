@@ -1,0 +1,54 @@
+server:
+  address: 127.0.0.1
+  port: 9010
+  servlet:
+    session:
+      cookie:
+        name: QUICK_AUTH_SESSION
+example:
+  user:
+    password-hash: ${EXAMPLE_USER_PASSWORD_HASH:}
+moli:
+  oauth:
+    auth-server:
+      enabled: true
+      login:
+        enabled: true
+      signing:
+        jwk-set-location: ${OAUTH_JWK_SET_LOCATION:}
+        active-key-id: ${OAUTH_ACTIVE_KEY_ID:}
+      audiences:
+        web: [quick-api]
+        machine: [quick-api]
+        reference: [quick-api]
+spring:
+  security:
+    oauth2:
+      authorizationserver:
+        issuer: ${AUTH_ISSUER:http://127.0.0.1:9010}
+        client:
+          web:
+            require-authorization-consent: true
+            registration:
+              client-id: web
+              client-secret: ${OAUTH_WEB_CLIENT_SECRET_HASH:}
+              client-authentication-methods: [client_secret_basic]
+              authorization-grant-types: [authorization_code, refresh_token]
+              redirect-uris: ["${OAUTH_REDIRECT_URI:http://127.0.0.1:9012/login/oauth2/code/local}"]
+              scopes: [openid, profile, api.read]
+          machine:
+            registration:
+              client-id: machine
+              client-secret: ${OAUTH_MACHINE_CLIENT_SECRET_HASH:}
+              client-authentication-methods: [client_secret_basic]
+              authorization-grant-types: [client_credentials]
+              scopes: [api.read]
+          reference:
+            registration:
+              client-id: reference
+              client-secret: ${OAUTH_REFERENCE_CLIENT_SECRET_HASH:}
+              client-authentication-methods: [client_secret_basic]
+              authorization-grant-types: [client_credentials]
+              scopes: [api.read]
+            token:
+              access-token-format: reference

@@ -47,7 +47,7 @@ Quick 是按需组合的 Maven 多模块项目，覆盖数据访问、缓存、W
 
 ## 全部模块导航
 
-当前 reactor 包含 37 个 Maven 项目：根构建 POM 加下列 36 个模块。每个模块目录均有 README，聚合模块的文档进一步说明子模块关系。
+当前 reactor 包含 47 个 Maven 项目：根构建 POM 加下列 46 个模块。每个模块目录均有 README，聚合模块的文档进一步说明子模块关系。
 
 ### 基础组件、运行时与构建工具
 
@@ -105,6 +105,23 @@ Quick 是按需组合的 Maven 多模块项目，覆盖数据访问、缓存、W
 | [moli-quick-oauth-client-jdbc](moli-quick-oauth/moli-quick-oauth-client/moli-quick-oauth-client-jdbc/README.md) | 长期授权 JDBC 存储 |
 | [moli-quick-oauth-client-redis](moli-quick-oauth/moli-quick-oauth-client/moli-quick-oauth-client-redis/README.md) | 临时状态/长期授权/分布式刷新 |
 
+### OAuth Authorization Server / Resource Server
+
+| 模块 | 用途 |
+| --- | --- |
+| [moli-quick-oauth-auth-server](moli-quick-oauth/moli-quick-oauth-auth-server/README.md) | 授权服务器聚合与接入 |
+| [moli-quick-oauth-auth-server-core](moli-quick-oauth/moli-quick-oauth-auth-server/moli-quick-oauth-auth-server-core/README.md) | 原生授权服务扩展、并发协调和受限快照编解码 |
+| [moli-quick-oauth-auth-server-spring-boot-autoconfigure](moli-quick-oauth/moli-quick-oauth-auth-server/moli-quick-oauth-auth-server-spring-boot-autoconfigure/README.md) | 授权服务器的属性、密钥和安全链接入 |
+| [moli-quick-oauth-auth-server-spring-boot-starter](moli-quick-oauth/moli-quick-oauth-auth-server/moli-quick-oauth-auth-server-spring-boot-starter/README.md) | 授权服务器应用依赖入口 |
+| [moli-quick-oauth-auth-server-jdbc](moli-quick-oauth/moli-quick-oauth-auth-server/moli-quick-oauth-auth-server-jdbc/README.md) | MySQL/PostgreSQL 原生 JDBC 授权持久化 |
+| [moli-quick-oauth-auth-server-redis](moli-quick-oauth/moli-quick-oauth-auth-server/moli-quick-oauth-auth-server-redis/README.md) | Redis/Sentinel 授权持久化与分布式协调 |
+| [moli-quick-oauth-resource-server](moli-quick-oauth/moli-quick-oauth-resource-server/README.md) | 资源服务器聚合与接入 |
+| [moli-quick-oauth-resource-server-core](moli-quick-oauth/moli-quick-oauth-resource-server/moli-quick-oauth-resource-server-core/README.md) | scope/role 权限映射内核 |
+| [moli-quick-oauth-resource-server-spring-boot-autoconfigure](moli-quick-oauth/moli-quick-oauth-resource-server/moli-quick-oauth-resource-server-spring-boot-autoconfigure/README.md) | JWT/opaque 验证、配置器和默认 API 安全链 |
+| [moli-quick-oauth-resource-server-spring-boot-starter](moli-quick-oauth/moli-quick-oauth-resource-server/moli-quick-oauth-resource-server-spring-boot-starter/README.md) | 资源服务器应用依赖入口 |
+
+独立三应用联调见 [OAuth 示例](moli-quick-oauth/examples/README.md)。
+
 ## 按场景选择
 
 - 统一 Web 错误、请求 ID：引入 Web Starter；正常成功响应仍由业务决定。
@@ -124,6 +141,7 @@ Quick 是按需组合的 Maven 多模块项目，覆盖数据访问、缓存、W
 | 请求验签 | `moli.interceptor.sign.sign.enable=true` | RedisUtil、Jackson 2 Mapper、签名协议一致性 |
 | 对象存储 Provider | 对应 enabled=true 或单 provider 选择项 | 需要实际 SDK 凭证、bucket 与权限 |
 | 生成器 Web/UI | `moli.codegen.enabled=true` | 宿主访问控制；页面只预览/下载 |
+| OAuth Authorization Server / Resource Server | 对应 `moli.oauth.auth-server.enabled=true` / `resource-server.enabled=true` | 默认关闭；Servlet、宿主认证、标准 Bearer 令牌；不自动桥接旧 JWT |
 | OAuth Client | `moli.oauth.client.enabled=true` | 登录另开 login.enabled，宿主掌握本地登录态 |
 
 各模块完整默认值及限制以其 README 和属性类为准。不要将演示应用、生成器或聚合父 POM 当成业务依赖入口。

@@ -1,0 +1,29 @@
+server:
+  address: 127.0.0.1
+  port: 9012
+  servlet:
+    session:
+      cookie:
+        name: QUICK_CLIENT_SESSION
+example:
+  resource-base: ${RESOURCE_BASE:http://127.0.0.1:9011}
+moli:
+  oauth:
+    client:
+      enabled: true
+      login:
+        enabled: true
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          local:
+            provider: quick-server
+            client-id: web
+            client-secret: ${OAUTH_CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+            scope: [openid, profile, api.read]
+        provider:
+          quick-server:
+            issuer-uri: ${AUTH_ISSUER:http://127.0.0.1:9010}

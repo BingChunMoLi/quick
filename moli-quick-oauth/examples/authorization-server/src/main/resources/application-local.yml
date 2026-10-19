@@ -1,0 +1,23 @@
+# Explicit local development only. The private key changes on restart.
+example:
+  user:
+    password-hash: '{bcrypt}$2a$10$se/1YIQDFrkKe2KvSOALr.KDBlLJujxmPKlsSj.C6jdOnepJ.SnIu'
+moli:
+  oauth:
+    auth-server:
+      signing:
+        development-ephemeral: true
+spring:
+  security:
+    oauth2:
+      authorizationserver:
+        client:
+          web:
+            registration:
+              client-secret: '{bcrypt}$2a$10$U0R/18YEUEFGChJgr/5tTeHU6WnuxxP8XGwqqbimeinmK6c5gJjNa'
+          machine:
+            registration:
+              client-secret: '{bcrypt}$2a$10$p6Yo7dZJDPSGdzdAsK6Z.OBeFKT11cAZmPknUbu11r/8P5W3/49IK'
+          reference:
+            registration:
+              client-secret: '{bcrypt}$2a$10$N.DsG9nf7Z9RGc6TjEWlT.vmAfOd6UnCVfCCJxJERK8rlSPN0xB82'

@@ -1,0 +1,2 @@
+org.springframework.boot.autoconfigure.AutoConfigurationImportFilter=\
+com.bingchunmoli.oauth.server.resource.autoconfigure.QuickResourceServerImportFilter

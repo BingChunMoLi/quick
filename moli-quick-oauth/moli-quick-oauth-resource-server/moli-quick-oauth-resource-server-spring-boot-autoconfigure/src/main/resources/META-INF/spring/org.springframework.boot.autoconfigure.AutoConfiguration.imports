@@ -1,0 +1,2 @@
+com.bingchunmoli.oauth.server.resource.autoconfigure.QuickResourceServerAutoConfiguration
+com.bingchunmoli.oauth.server.resource.autoconfigure.QuickResourceServerServletRequirement

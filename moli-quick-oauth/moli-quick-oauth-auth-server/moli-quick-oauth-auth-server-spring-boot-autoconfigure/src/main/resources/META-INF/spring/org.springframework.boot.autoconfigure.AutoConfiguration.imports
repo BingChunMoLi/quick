@@ -1,0 +1,2 @@
+com.bingchunmoli.oauth.server.authorization.autoconfigure.QuickAuthorizationServerAutoConfiguration
+com.bingchunmoli.oauth.server.authorization.autoconfigure.QuickAuthorizationServerServletRequirement
