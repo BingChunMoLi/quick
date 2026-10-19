@@ -4,5 +4,5 @@
   <parent><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-codegen</artifactId><version>1.0.13-bate</version></parent>
   <artifactId>moli-quick-codegen-app</artifactId>
   <dependencies><dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-codegen-spring-boot-starter</artifactId></dependency></dependencies>
-  <build><plugins><plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId><version>4.1.0</version><configuration><classifier>exec</classifier></configuration><executions><execution><goals><goal>repackage</goal></goals></execution></executions></plugin></plugins></build>
+  <build><plugins><plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId><version>4.1.1</version><configuration><classifier>exec</classifier></configuration><executions><execution><goals><goal>repackage</goal></goals></execution></executions></plugin></plugins></build>
 </project>
