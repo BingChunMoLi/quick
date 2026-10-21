@@ -3,6 +3,7 @@ package com.bingchunmoli.interceptor;
 
 import com.bingchunmoli.properties.InterceptorsAutoConfigurationProperties;
 import com.bingchunmoli.exception.SignConfigException;
+import com.bingchunmoli.exception.SignParamIllegalArgumentException;
 import com.bingchunmoli.filter.CacheFilter;
 import com.bingchunmoli.filter.RepeatableBodyRequestWrapper;
 import com.bingchunmoli.util.SignUtil;
@@ -44,7 +45,16 @@ public class SignInterceptor implements HandlerInterceptor {
         // An interceptor cannot replace the request passed to MVC; the filter must do the wrapping.
         if (CacheFilter.isJsonRequest(request) && WebUtils.getNativeRequest(request, RepeatableBodyRequestWrapper.class) == null)
             throw new SignConfigException("JSON signature verification requires CacheFilter before MVC");
-        return signUtil.verify(request);
+        try {
+            if (!signUtil.verify(request)) {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid request signature");
+                return false;
+            }
+            return true;
+        } catch (SignParamIllegalArgumentException invalid) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid signed request");
+            return false;
+        }
     }
 
 

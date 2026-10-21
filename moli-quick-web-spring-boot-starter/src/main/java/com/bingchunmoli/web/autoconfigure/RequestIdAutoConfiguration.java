@@ -3,6 +3,7 @@ package com.bingchunmoli.web.autoconfigure;
 import com.bingchunmoli.web.request.RequestIdFilter;
 import com.bingchunmoli.web.request.RequestIdGenerator;
 import com.bingchunmoli.web.request.UuidRequestIdGenerator;
+import jakarta.servlet.DispatcherType;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -38,6 +39,8 @@ public class RequestIdAutoConfiguration {
         RequestIdFilter filter = new RequestIdFilter(properties.getRequestId(), generator);
         FilterRegistrationBean<RequestIdFilter> registration = new FilterRegistrationBean<>(filter);
         registration.setName("moliRequestIdFilter");
+        registration.setAsyncSupported(true);
+        registration.setDispatcherTypes(DispatcherType.REQUEST, DispatcherType.ASYNC);
         registration.setOrder(properties.getRequestId().getFilterOrder());
         return registration;
     }

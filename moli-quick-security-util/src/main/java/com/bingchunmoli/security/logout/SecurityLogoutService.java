@@ -37,31 +37,37 @@ public class SecurityLogoutService {
         if (username == null || username.isBlank()) {
             return 0;
         }
-        return sessionRegistry.getAllPrincipals().stream()
-                .filter(principal -> usernameEqualsPrincipal(username, principal))
-                .mapToInt(this::forceLogout)
-                .sum();
+        synchronized (sessionRegistry) {
+            return sessionRegistry.getAllPrincipals().stream()
+                    .filter(principal -> usernameEqualsPrincipal(username, principal))
+                    .mapToInt(this::forceLogout)
+                    .sum();
+        }
     }
 
     public int forceLogout(Object principal) {
         if (principal == null) {
             return 0;
         }
-        List<SessionInformation> sessions = sessionRegistry.getAllSessions(principal, false);
-        sessions.forEach(SessionInformation::expireNow);
-        return sessions.size();
+        synchronized (sessionRegistry) {
+            List<SessionInformation> sessions = sessionRegistry.getAllSessions(principal, false);
+            sessions.forEach(SessionInformation::expireNow);
+            return sessions.size();
+        }
     }
 
     public boolean forceLogoutSession(String sessionId) {
         if (sessionId == null || sessionId.isBlank()) {
             return false;
         }
-        SessionInformation sessionInformation = sessionRegistry.getSessionInformation(sessionId);
-        if (sessionInformation == null || sessionInformation.isExpired()) {
-            return false;
+        synchronized (sessionRegistry) {
+            SessionInformation sessionInformation = sessionRegistry.getSessionInformation(sessionId);
+            if (sessionInformation == null || sessionInformation.isExpired()) {
+                return false;
+            }
+            sessionInformation.expireNow();
+            return true;
         }
-        sessionInformation.expireNow();
-        return true;
     }
 
     public List<SessionInformation> getSessionsByUsername(String username, boolean includeExpiredSessions) {

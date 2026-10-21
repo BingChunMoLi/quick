@@ -44,6 +44,10 @@ Starter 默认使用项目的 `ResultVO`：
 - `ApiException` 自定义 HTTP 状态、业务码和详情；
 - 引入幂等或限流 Starter 时，自动映射 HTTP 409 和 HTTP 429。
 
+Spring MVC 的 `ErrorResponse` 异常保留原 HTTP 状态及协议响应头：不支持的 Content-Type 返回 415，方法不允许返回 405 并保留 `Allow`，框架错误中的 `Retry-After` 等头也会保留。响应体继续使用配置的 `WebExceptionResponseFactory`，工厂自身的其他响应头不丢失。缺少路径变量等服务端映射错误、返回值校验失败保持 500；入参校验仍为 400。
+
+普通业务异常上的 `@ResponseStatus` 也保留声明的 HTTP 状态，支持继承、组合注解与属性别名，并沿 cause 链优先使用最外层的状态声明。错误体仍由响应工厂生成，使用配置的客户端／系统错误码；`reason` 支持宿主 MessageSource 本地化，未声明 reason 时使用标准 HTTP 状态描述，不暴露异常内部消息。Controller 自身的异常处理器和优先级更高的宿主 Advice 继续优先执行。
+
 业务异常示例：
 
 ```java
@@ -67,6 +71,8 @@ throw new ApiException(
 
 安全格式的客户端请求 ID 会被透传；包含空白、控制字符、超长等不安全值会被替换。
 声明自定义 `RequestIdGenerator` Bean 可替换默认的无连字符 UUID。
+
+过滤器覆盖 Servlet REQUEST 和 ASYNC 分派，异步重新分派复用首次验证或生成的 ID。每次分派进入时绑定 MDC，退出时恢复该线程原有上下文，成功响应和异步异常响应均适用。独立后台任务或 Callable 业务工作线程的 MDC 传播由宿主执行器的任务装饰器等机制管理。
 
 Logback 示例：
 

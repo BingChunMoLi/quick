@@ -17,6 +17,8 @@ public class SignParamDTO {
     private String signatureStr;
     // Extracted during canonicalization; claimed only after the signature is valid.
     private CustomParamDTO nonce;
+    // Rechecked after signature verification, before claiming the nonce.
+    private CustomParamDTO timestamp;
 
     /**
      * 签名参数builder

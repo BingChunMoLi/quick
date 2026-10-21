@@ -25,6 +25,7 @@ class JwtSessionStoreFactoryTest {
                 .create(new JwtTokenProperties());
 
         assertThat(store).isInstanceOf(InMemoryJwtSessionStore.class);
+        ((InMemoryJwtSessionStore) store).close();
     }
 
     @Test
@@ -35,6 +36,7 @@ class JwtSessionStoreFactoryTest {
         JwtSessionStore store = new JwtSessionStoreFactory(new DefaultListableBeanFactory()).create(properties);
 
         assertThat(store).isInstanceOf(CustomStore.class);
+        ((CustomStore) store).close();
     }
 
     @Test

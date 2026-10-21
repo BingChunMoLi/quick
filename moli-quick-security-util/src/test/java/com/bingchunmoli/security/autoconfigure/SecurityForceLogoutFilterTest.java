@@ -10,6 +10,8 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.context.SecurityContextImpl;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
@@ -68,6 +70,68 @@ class SecurityForceLogoutFilterTest {
         assertThat(response.getStatus()).isEqualTo(401);
         assertThat(session.isInvalid()).isTrue();
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    void registersContextPersistedInSessionBeforeTheSecurityProxyLoadsIt() throws Exception {
+        SessionRegistryImpl registry = new SessionRegistryImpl();
+        SecurityForceLogoutFilter filter = new SecurityForceLogoutFilter(registry, new SecurityContextLogoutHandler(), 401);
+        User user = new User("user", "password", AuthorityUtils.createAuthorityList("ROLE_USER"));
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+                new SecurityContextImpl(UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities())));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setSession(session);
+        filter.doFilter(request, new MockHttpServletResponse(), proceedingChain());
+        assertThat(registry.getAllPrincipals()).containsExactly(user);
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    void registersSessionCreatedByLoginEvenWhenTheSecurityProxyClearsThreadContext() throws Exception {
+        SessionRegistryImpl registry = new SessionRegistryImpl();
+        SecurityForceLogoutFilter filter = new SecurityForceLogoutFilter(registry, new SecurityContextLogoutHandler(), 401);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        User user = new User("user", "password", AuthorityUtils.createAuthorityList("ROLE_USER"));
+        filter.doFilter(request, new MockHttpServletResponse(), (req, res) -> {
+            request.getSession(true).setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+                    new SecurityContextImpl(UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities())));
+            SecurityContextHolder.clearContext();
+        });
+        assertThat(registry.getAllPrincipals()).containsExactly(user);
+    }
+
+    @Test
+    void rejectsExpiredSessionWithoutAThreadAuthentication() throws Exception {
+        SessionRegistryImpl registry = new SessionRegistryImpl();
+        MockHttpSession session = new MockHttpSession();
+        User user = new User("user", "password", AuthorityUtils.createAuthorityList("ROLE_USER"));
+        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+                new SecurityContextImpl(UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities())));
+        registry.registerNewSession(session.getId(), user);
+        registry.getSessionInformation(session.getId()).expireNow();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setSession(session);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        new SecurityForceLogoutFilter(registry, new SecurityContextLogoutHandler(), 401)
+                .doFilter(request, response, (req, res) -> { throw new AssertionError("expired session proceeded"); });
+        assertThat(response.getStatus()).isEqualTo(401);
+        assertThat(session.isInvalid()).isTrue();
+    }
+
+    @Test
+    void updatesRegisteredPrincipalWhenAuthenticationChanges() throws Exception {
+        SessionRegistryImpl registry = new SessionRegistryImpl();
+        MockHttpSession session = new MockHttpSession();
+        registry.registerNewSession(session.getId(), "old-user");
+        User user = new User("new-user", "password", AuthorityUtils.createAuthorityList("ROLE_USER"));
+        SecurityContextHolder.getContext().setAuthentication(
+                UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities()));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setSession(session);
+        new SecurityForceLogoutFilter(registry, new SecurityContextLogoutHandler(), 401)
+                .doFilter(request, new MockHttpServletResponse(), proceedingChain());
+        assertThat(registry.getAllPrincipals()).containsExactly(user);
     }
 
     private FilterChain proceedingChain() {

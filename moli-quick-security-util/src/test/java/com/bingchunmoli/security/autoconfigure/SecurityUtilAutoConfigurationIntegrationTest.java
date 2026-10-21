@@ -11,7 +11,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import com.bingchunmoli.security.jwt.InMemoryJwtSessionStore;
+import com.bingchunmoli.security.jwt.JwtAuthenticationFilter;
+import com.bingchunmoli.security.jwt.JwtSessionStore;
+import org.springframework.test.util.ReflectionTestUtils;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.web.DefaultSecurityFilterChain;
@@ -50,7 +55,10 @@ class SecurityUtilAutoConfigurationIntegrationTest {
         contextRunner.withPropertyValues("moli.security.force-logout-filter-enabled=false")
                 .run(context -> {
                     assertThat(context).hasSingleBean(SecurityForceLogoutFilter.class);
-                    assertThat(context).doesNotHaveBean(FilterRegistrationBean.class);
+                    assertThat(context.getBean("securityForceLogoutFilterRegistration", FilterRegistrationBean.class)
+                            .isEnabled()).isFalse();
+                    assertThat(context.getBean("jwtAuthenticationFilterRegistration", FilterRegistrationBean.class)
+                            .isEnabled()).isFalse();
                 });
     }
 
@@ -60,6 +68,23 @@ class SecurityUtilAutoConfigurationIntegrationTest {
                 .hasSingleBean(SecurityFilterChain.class)
                 .hasSingleBean(SecurityLogoutService.class)
                 .hasSingleBean(SessionRegistry.class));
+    }
+
+    @Test
+    void shouldStartDefaultChainWithJwtDisabled() {
+        webContextRunner.withPropertyValues("moli.security.jwt.enabled=false")
+                .run(context -> assertThat(context)
+                        .hasSingleBean(SecurityFilterChain.class)
+                        .doesNotHaveBean(JwtAuthenticationFilter.class));
+    }
+
+    @Test
+    void shouldCloseDefaultMemoryStoreWhenContextCloses() {
+        AtomicReference<InMemoryJwtSessionStore> store = new AtomicReference<>();
+        contextRunner.run(context -> store.set((InMemoryJwtSessionStore) context.getBean(JwtSessionStore.class)));
+        ScheduledExecutorService cleanup = (ScheduledExecutorService) ReflectionTestUtils.getField(store.get(), "cleanup");
+        assertThat(cleanup).isNotNull();
+        assertThat(cleanup.isShutdown()).isTrue();
     }
 
     @Test
@@ -113,7 +138,6 @@ class SecurityUtilAutoConfigurationIntegrationTest {
     }
 
     @Configuration(proxyBeanMethods = false)
-    @EnableWebSecurity
     static class WebSecurityConfiguration {
 
         @Bean

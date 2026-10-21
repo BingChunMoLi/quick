@@ -6,43 +6,60 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.MessageSource;
+import org.springframework.context.MessageSourceAware;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.core.Ordered;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.ErrorResponseException;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Maps common Spring MVC failures to a stable {@code ResultVO} error contract.
  */
 @Order(Ordered.LOWEST_PRECEDENCE)
 @RestControllerAdvice
-public class GlobalWebExceptionHandler extends AbstractWebExceptionHandler {
+public class GlobalWebExceptionHandler extends AbstractWebExceptionHandler implements MessageSourceAware {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GlobalWebExceptionHandler.class);
 
     private final QuickWebProperties.ExceptionHandling properties;
 
+    private MessageSource messageSource;
+
     public GlobalWebExceptionHandler(WebExceptionResponseFactory responseFactory,
                                      QuickWebProperties properties) {
         super(responseFactory);
         this.properties = properties.getExceptionHandling();
+    }
+
+    @Override
+    public void setMessageSource(MessageSource messageSource) {
+        this.messageSource = messageSource;
     }
 
     @ExceptionHandler(ApiException.class)
@@ -75,6 +92,9 @@ public class GlobalWebExceptionHandler extends AbstractWebExceptionHandler {
     @ExceptionHandler(HandlerMethodValidationException.class)
     public ResponseEntity<?> handleMethodValidation(
             HandlerMethodValidationException exception, HttpServletRequest request) {
+        if (exception.getStatusCode().value() != 400) {
+            return springError(exception, request);
+        }
         Map<String, String> errors = new LinkedHashMap<>();
         exception.getAllErrors().forEach(error ->
                 errors.putIfAbsent("request", defaultMessage(error.getDefaultMessage(), "参数校验失败")));
@@ -98,6 +118,9 @@ public class GlobalWebExceptionHandler extends AbstractWebExceptionHandler {
             ServletRequestBindingException.class
     })
     public ResponseEntity<?> handleBadRequest(Exception exception, HttpServletRequest request) {
+        if (exception instanceof ErrorResponse error && error.getStatusCode().value() != 400) {
+            return springError(error, request);
+        }
         return response(
                 HttpStatus.BAD_REQUEST,
                 properties.getValidationErrorCode(),
@@ -119,26 +142,60 @@ public class GlobalWebExceptionHandler extends AbstractWebExceptionHandler {
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<?> handleMethodNotAllowed(
             HttpRequestMethodNotSupportedException exception, HttpServletRequest request) {
-        return response(
+        return withHeaders(response(
                 HttpStatus.METHOD_NOT_ALLOWED,
                 properties.getMethodNotAllowedCode(),
                 "请求方法不支持",
                 request,
-                null);
+                null), exception.getHeaders());
     }
 
     @ExceptionHandler(ErrorResponseException.class)
     public ResponseEntity<?> handleSpringErrorResponse(
             ErrorResponseException exception, HttpServletRequest request) {
-        String code = exception.getStatusCode().is4xxClientError()
+        return springError(exception, request);
+    }
+
+    private ResponseEntity<?> springError(ErrorResponse error, HttpServletRequest request) {
+        String code = error.getStatusCode().is4xxClientError()
                 ? properties.getClientErrorCode()
                 : properties.getSystemErrorCode();
-        String message = defaultMessage(exception.getBody().getDetail(), "请求处理失败");
-        return response(exception.getStatusCode(), code, message, request, null);
+        String message = defaultMessage(error.getBody().getDetail(), "请求处理失败");
+        return withHeaders(response(error.getStatusCode(), code, message, request, null), error.getHeaders());
+    }
+
+    private ResponseEntity<?> withHeaders(ResponseEntity<?> result, HttpHeaders protocolHeaders) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.putAll(result.getHeaders());
+        headers.putAll(protocolHeaders);
+        return new ResponseEntity<>(result.getBody(), headers, result.getStatusCode());
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleUnexpected(Exception exception, HttpServletRequest request) {
+        Set<Exception> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+        Exception current = exception;
+        while (visited.add(current)) {
+            if (current instanceof ErrorResponse error) {
+                return springError(error, request);
+            }
+            ResponseStatus declared = AnnotatedElementUtils.findMergedAnnotation(current.getClass(), ResponseStatus.class);
+            if (declared != null) {
+                HttpStatus status = declared.code();
+                String message = declared.reason();
+                if (messageSource != null && !message.isEmpty()) {
+                    message = messageSource.getMessage(message, null, message, LocaleContextHolder.getLocale());
+                }
+                String code = status.is4xxClientError()
+                        ? properties.getClientErrorCode()
+                        : properties.getSystemErrorCode();
+                return response(status, code, defaultMessage(message, status.getReasonPhrase()), request, null);
+            }
+            if (!(current.getCause() instanceof Exception cause)) {
+                break;
+            }
+            current = cause;
+        }
         LOGGER.error("Unhandled web request exception, path={}", request.getRequestURI(), exception);
         String message = properties.isIncludeExceptionMessage()
                 ? defaultMessage(exception.getMessage(), "系统执行出错")

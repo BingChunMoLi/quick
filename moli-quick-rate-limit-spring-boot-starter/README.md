@@ -98,4 +98,10 @@ RateLimitStore databaseRateLimitStore() {
 
 注解类型为 `com.bingchunmoli.ratelimit.annotation.RateLimit`，需经过 Spring 代理；同类内部调用不生效。Redis 模式由宿主提供 StringRedisTemplate，内存模式不在多个实例之间共享限额。
 
+注解可以声明在实现方法或接口方法上，支持继承接口及泛型桥接方法，兼容 JDK/CGLIB 代理；实现方法的显式配置优先。自动配置通过 Advisor 使用一致的匹配和执行规则，未注解方法不受限流。手动装配代理时，将 `RateLimitAspect` 通过 `addAdvisor` 注册；自动配置及原有执行顺序不变。
+
+也支持子类引入接口、业务实现继承自未实现该接口的父类。接口方法按其解析后的实际实现方法精确匹配，未标注的同名重载不会受限流。
+
+Advisor 持有独立、稳定的 Advice 实例，支持通过 Spring `Advised.removeAdvisor(advisor)` 移除；按 Advice 移除时使用 `Advised.removeAdvice(advisor.getAdvice())`。
+
 将示例 key 写为 `#p0` 可避免依赖编译器参数名保留配置。限流仅限制方法调用，不自动按登录用户/IP 分组；分组维度由 key 明确指定。与幂等同时使用时默认限流先执行，重复请求也可能消耗窗口额度。HTTP 429 映射由 [Web Starter](../moli-quick-web-spring-boot-starter/README.md) 或宿主异常处理器负责。

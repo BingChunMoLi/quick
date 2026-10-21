@@ -92,4 +92,10 @@ IdempotencyStore databaseIdempotencyStore() {
 
 注解类型为 `com.bingchunmoli.idempotency.annotation.Idempotent`，需作用于 Spring 管理的可代理方法；同类内部调用不经过切面。内存存储不跨实例共享；Redis 模式由宿主提供 StringRedisTemplate（例如使用 Boot Redis Starter）。默认不缓存或重放上一次业务响应，重复请求抛出异常，由业务或 [Web Starter](../moli-quick-web-spring-boot-starter/README.md) 转为响应。
 
+注解可以声明在实现方法或接口方法上，接口继承和泛型桥接方法在 JDK/CGLIB 代理下均支持；实现方法的显式配置优先于接口配置。自动配置使用同一套注解查找规则筛选并执行 Advisor，没有注解的方法不会获得幂等保护。手动装配代理时，将 `IdempotencyAspect` 作为 Advisor 通过 `addAdvisor` 注册；自动配置接入方式及配置项不变。
+
+也支持子类引入接口、业务实现继承自未实现该接口的父类。接口方法按其解析后的实际实现方法精确匹配，未标注的同名重载不会获得保护。
+
+Advisor 持有独立、稳定的 Advice 实例，支持通过 Spring `Advised.removeAdvisor(advisor)` 移除；按 Advice 移除时使用 `Advised.removeAdvice(advisor.getAdvice())`。
+
 与限流组合时，默认限流切面顺序在幂等之前，重复请求也可能计入限额；可按业务调整 order。幂等 TTL 需覆盖业务执行时间，TTL 到期后可能接受新请求，不提供数据库事务的恰好一次提交保证。

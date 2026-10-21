@@ -5,16 +5,36 @@ import com.bingchunmoli.web.exception.GlobalWebExceptionHandler;
 import com.bingchunmoli.web.exception.RateLimitExceptionHandler;
 import com.bingchunmoli.web.exception.WebExceptionResponseFactory;
 import com.bingchunmoli.web.request.RequestIdGenerator;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.FilterRegistration;
+import jakarta.servlet.ServletContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 
+import java.util.EnumSet;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class WebAutoConfigurationTest {
+
+    @Test
+    void requestIdRegistrationSupportsRequestAndAsyncDispatches() throws Exception {
+        var registration = new RequestIdAutoConfiguration()
+                .moliRequestIdFilterRegistration(new QuickWebProperties(), () -> "generated-id");
+        var servletContext = mock(ServletContext.class);
+        var dynamic = mock(FilterRegistration.Dynamic.class);
+        when(servletContext.addFilter("moliRequestIdFilter", registration.getFilter())).thenReturn(dynamic);
+        registration.onStartup(servletContext);
+        verify(dynamic).setAsyncSupported(true);
+        verify(dynamic).addMappingForUrlPatterns(
+                EnumSet.of(DispatcherType.REQUEST, DispatcherType.ASYNC), false, "/*");
+    }
 
     private final WebApplicationContextRunner contextRunner = new WebApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(

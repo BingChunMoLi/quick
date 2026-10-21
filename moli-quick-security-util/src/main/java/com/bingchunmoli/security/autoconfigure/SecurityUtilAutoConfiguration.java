@@ -1,7 +1,6 @@
 package com.bingchunmoli.security.autoconfigure;
 
 import com.bingchunmoli.security.context.SecurityUserContext;
-import com.bingchunmoli.security.jwt.InMemoryJwtSessionStore;
 import com.bingchunmoli.security.jwt.JwtAuthenticationFilter;
 import com.bingchunmoli.security.jwt.JwtSessionStore;
 import com.bingchunmoli.security.jwt.JwtTokenProperties;
@@ -20,11 +19,15 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.beans.factory.ListableBeanFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -66,6 +69,15 @@ public class SecurityUtilAutoConfiguration {
     @ConditionalOnClass(HttpSessionEvent.class)
     public HttpSessionEventPublisher httpSessionEventPublisher() {
         return new HttpSessionEventPublisher();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    @ConditionalOnProperty(prefix = "moli.security", name = "force-logout-filter-enabled", havingValue = "true",
+            matchIfMissing = true)
+    public SecuritySessionRegistrationListener securitySessionRegistrationListener(SessionRegistry sessionRegistry) {
+        return new SecuritySessionRegistrationListener(sessionRegistry);
     }
 
     @Bean
@@ -127,6 +139,17 @@ public class SecurityUtilAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnBean(JwtAuthenticationFilter.class)
+    @ConditionalOnMissingBean(name = "jwtAuthenticationFilterRegistration")
+    public FilterRegistrationBean<JwtAuthenticationFilter> jwtAuthenticationFilterRegistration(
+            JwtAuthenticationFilter jwtAuthenticationFilter) {
+        FilterRegistrationBean<JwtAuthenticationFilter> registration = new FilterRegistrationBean<>(jwtAuthenticationFilter);
+        // Authentication must run inside the selected security chain, after its context has been loaded.
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
     @ConditionalOnMissingBean
     @ConditionalOnBean(AuthenticationConfiguration.class)
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration)
@@ -141,20 +164,24 @@ public class SecurityUtilAutoConfiguration {
     @ConditionalOnProperty(prefix = "moli.security", name = "default-filter-chain-enabled", havingValue = "true",
             matchIfMissing = true)
     public SecurityFilterChain moliSecurityFilterChain(HttpSecurity http, SecurityUtilProperties properties,
-                                                       JwtAuthenticationFilter jwtAuthenticationFilter)
+                                                       ObjectProvider<JwtAuthenticationFilter> jwtAuthenticationFilter)
             throws Exception {
         if (!properties.isCsrfEnabled()) {
             http.csrf(AbstractHttpConfigurer::disable);
         }
-        if (!properties.isFormLoginEnabled()) {
+        if (properties.isFormLoginEnabled()) {
+            http.formLogin(form -> form.permitAll());
+        } else {
             http.formLogin(AbstractHttpConfigurer::disable);
         }
-        if (!properties.isHttpBasicEnabled()) {
+        if (properties.isHttpBasicEnabled()) {
+            http.httpBasic(Customizer.withDefaults());
+        } else {
             http.httpBasic(AbstractHttpConfigurer::disable);
         }
         if (properties.getJwt().isEnabled()) {
             http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-            http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            http.addFilterBefore(jwtAuthenticationFilter.getObject(), UsernamePasswordAuthenticationFilter.class);
         }
         http.authorizeHttpRequests(authorize -> {
             for (String pattern : properties.getPermitAll()) {
@@ -163,6 +190,14 @@ public class SecurityUtilAutoConfiguration {
             authorize.anyRequest().authenticated();
         });
         return http.build();
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    @ConditionalOnProperty(prefix = "moli.security", name = "default-filter-chain-enabled", havingValue = "true",
+            matchIfMissing = true)
+    @EnableWebSecurity
+    static class DefaultWebSecurityConfiguration {
     }
 
     @Bean
@@ -177,8 +212,6 @@ public class SecurityUtilAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(name = "securityForceLogoutFilterRegistration")
     @ConditionalOnClass(FilterRegistrationBean.class)
-    @ConditionalOnProperty(prefix = "moli.security", name = "force-logout-filter-enabled", havingValue = "true",
-            matchIfMissing = true)
     public FilterRegistrationBean<SecurityForceLogoutFilter> securityForceLogoutFilterRegistration(
             SecurityForceLogoutFilter securityForceLogoutFilter,
             SecurityUtilProperties properties) {
@@ -186,6 +219,7 @@ public class SecurityUtilAutoConfiguration {
         registrationBean.setFilter(securityForceLogoutFilter);
         registrationBean.setName("securityForceLogoutFilter");
         registrationBean.setOrder(properties.getFilterOrder());
+        registrationBean.setEnabled(properties.isForceLogoutFilterEnabled());
         return registrationBean;
     }
 }

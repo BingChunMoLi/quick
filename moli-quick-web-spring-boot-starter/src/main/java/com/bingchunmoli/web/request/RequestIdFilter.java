@@ -32,6 +32,11 @@ public class RequestIdFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilterAsyncDispatch() {
+        return false;
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         String requestId = resolveRequestId(request);
@@ -47,6 +52,11 @@ public class RequestIdFilter extends OncePerRequestFilter {
     }
 
     private String resolveRequestId(HttpServletRequest request) {
+        if (isAsyncDispatch(request)
+                && request.getAttribute(REQUEST_ID_ATTRIBUTE) instanceof String existing
+                && isValid(existing)) {
+            return existing;
+        }
         if (properties.isAcceptIncoming()) {
             String incoming = request.getHeader(properties.getHeaderName());
             if (isValid(incoming)) {

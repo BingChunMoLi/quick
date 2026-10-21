@@ -2,18 +2,28 @@ package com.bingchunmoli.security.jwt;
 
 import com.bingchunmoli.security.logout.SecurityForceLogoutUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.*;
 
 class JwtTokenServiceTest {
 
+    private final InMemoryJwtSessionStore sessionStore = new InMemoryJwtSessionStore();
+
+    @AfterEach
+    void closeStore() {
+        sessionStore.close();
+    }
+
     @Test
     void shouldAuthenticateSimpleModeWithServerSideSession() {
-        InMemoryJwtSessionStore sessionStore = new InMemoryJwtSessionStore();
         JwtTokenService tokenService = tokenService(JwtMode.SIMPLE, sessionStore);
 
         JwtToken token = tokenService.createToken(user());
@@ -26,7 +36,6 @@ class JwtTokenServiceTest {
 
     @Test
     void shouldAuthenticateMixinModeAndRejectAfterUserForceLogout() {
-        InMemoryJwtSessionStore sessionStore = new InMemoryJwtSessionStore();
         JwtTokenService tokenService = tokenService(JwtMode.MIXIN, sessionStore);
         JwtToken token = tokenService.createToken(user());
 
@@ -40,7 +49,6 @@ class JwtTokenServiceTest {
 
     @Test
     void shouldAuthenticateStatelessModeWithoutServerSideSession() {
-        InMemoryJwtSessionStore sessionStore = new InMemoryJwtSessionStore();
         JwtTokenService tokenService = tokenService(JwtMode.STATELESS, sessionStore);
 
         JwtToken token = tokenService.createToken(user());
@@ -52,7 +60,7 @@ class JwtTokenServiceTest {
 
     @Test
     void shouldRejectStatelessTokenAfterTokenForceLogout() {
-        JwtTokenService tokenService = tokenService(JwtMode.STATELESS, new InMemoryJwtSessionStore());
+        JwtTokenService tokenService = tokenService(JwtMode.STATELESS, sessionStore);
         JwtToken token = tokenService.createToken(user());
 
         SecurityForceLogoutUtil.forceLogoutToken(tokenService, token.getToken());
@@ -60,6 +68,61 @@ class JwtTokenServiceTest {
         assertThatThrownBy(() -> tokenService.authenticate(token.getToken()))
                 .isInstanceOf(JwtTokenException.class)
                 .hasMessageContaining("revoked");
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("com.bingchunmoli.security.jwt.JwtClaimsFixtures#invalidClaims")
+    void shouldRejectInvalidClaimsBeforeAnyStorageOperation(String label, Map<String, Object> claims) throws Exception {
+        JwtSessionStore store = mock(JwtSessionStore.class);
+        JwtTokenService tokens = tokenService(JwtMode.SIMPLE, store);
+        String token = JwtClaimsFixtures.sign(claims, "moli-quick-security-test-secret-key-123456");
+        assertThatThrownBy(() -> tokens.authenticate(token)).isInstanceOf(JwtTokenException.class);
+        assertThatThrownBy(() -> tokens.forceLogoutToken(token)).isInstanceOf(JwtTokenException.class);
+        verifyNoInteractions(store);
+    }
+
+    @Test
+    void delegatesSessionValidationAndNeverRevokesAnIdleSnapshot() {
+        JwtSessionStore store = spy(sessionStore);
+        JwtTokenService tokens = tokenService(JwtMode.SIMPLE, store);
+        JwtToken token = tokens.createToken(user());
+        clearInvocations(store);
+        assertThat(tokens.authenticate(token.getToken()).getName()).isEqualTo("moli");
+        verify(store).refreshIfValid(eq(token.getSessionId()), any(), any());
+        verify(store, never()).findBySessionId(any());
+        verify(store, never()).expireSession(any());
+    }
+
+    @Test
+    void sessionRejectedDuringAtomicValidationCannotAuthenticateOrBeUnconditionallyRevoked() {
+        JwtSessionStore store = spy(sessionStore);
+        JwtTokenService tokens = tokenService(JwtMode.MIXIN, store);
+        JwtToken token = tokens.createToken(user());
+        doReturn(java.util.Optional.empty()).when(store).refreshIfValid(any(), any(), any());
+        assertThatThrownBy(() -> tokens.authenticate(token.getToken())).isInstanceOf(JwtTokenException.class);
+        verify(store, never()).expireSession(any());
+    }
+
+    @Test
+    void shouldAcceptLegacyTokenWithoutModeUsingTheConfiguredMode() throws Exception {
+        JwtTokenService tokens = tokenService(JwtMode.SIMPLE, sessionStore);
+        JwtToken issued = tokens.createToken(user());
+        Map<String, Object> claims = JwtClaimsFixtures.claims();
+        claims.remove("mode");
+        claims.put("jti", issued.getTokenId());
+        claims.put("sub", "1001");
+        claims.put("sid", issued.getSessionId());
+        String token = JwtClaimsFixtures.sign(claims, "moli-quick-security-test-secret-key-123456");
+        assertThat(tokens.authenticate(token).getName()).isEqualTo("moli");
+    }
+
+    @Test
+    void shouldAcceptStatelessTokenWithoutSessionOrOptionalUserClaims() throws Exception {
+        Map<String, Object> claims = JwtClaimsFixtures.claims();
+        claims.put("mode", "STATELESS");
+        claims.remove("sid");
+        String token = JwtClaimsFixtures.sign(claims, "moli-quick-security-test-secret-key-123456");
+        assertThat(tokenService(JwtMode.STATELESS, sessionStore).authenticate(token).isAuthenticated()).isTrue();
     }
 
     private JwtTokenService tokenService(JwtMode mode, JwtSessionStore sessionStore) {

@@ -13,16 +13,20 @@ import org.springframework.util.StopWatch;
 @Slf4j
 @Aspect
 public class ExecutionAspect {
-    private final static StopWatch STOP_WATCH = new StopWatch();
-
     @Around(value = "@annotation(executionTime)" )
     public Object logThrowing(ProceedingJoinPoint pjp, ExecutionTime executionTime) throws Throwable{
-        STOP_WATCH.start(executionTime.value());
+        if (!log.isDebugEnabled()) {
+            return pjp.proceed(pjp.getArgs());
+        }
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start(executionTime.value());
         try {
             return pjp.proceed(pjp.getArgs());
         }finally {
-            STOP_WATCH.stop();
-            log.debug(STOP_WATCH.prettyPrint());
+            stopWatch.stop();
+            if (log.isDebugEnabled()) {
+                log.debug(stopWatch.prettyPrint());
+            }
         }
     }
 }

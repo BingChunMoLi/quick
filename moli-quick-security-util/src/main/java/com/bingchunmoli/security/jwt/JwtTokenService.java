@@ -95,14 +95,54 @@ public class JwtTokenService {
 
     public Claims parseClaims(String token) {
         try {
-            return Jwts.parser()
+            Claims claims = Jwts.parser()
                     .verifyWith(secretKey)
                     .requireIssuer(properties.getIssuer())
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
+            validateClaims(claims);
+            return claims;
         } catch (Exception ex) {
             throw new JwtTokenException("invalid jwt token", ex);
+        }
+    }
+
+    private void validateClaims(Claims claims) {
+        requireText(claims.get("jti"), "jti");
+        requireText(claims.get("sub"), "sub");
+        if (claims.getExpiration() == null) {
+            throw new IllegalArgumentException("Missing exp claim");
+        }
+        if (claims.get(CLAIM_MODE) != null) {
+            requireText(claims.get(CLAIM_MODE), CLAIM_MODE);
+        }
+        JwtMode mode = resolveMode(claims);
+        Object sessionId = claims.get(CLAIM_SESSION_ID);
+        if (mode != JwtMode.STATELESS || sessionId != null) {
+            requireText(sessionId, CLAIM_SESSION_ID);
+        }
+        if (mode != JwtMode.SIMPLE) {
+            if (claims.get(CLAIM_USERNAME) != null && !(claims.get(CLAIM_USERNAME) instanceof String)) {
+                throw new IllegalArgumentException("Invalid username claim");
+            }
+            Object authorities = claims.get(CLAIM_AUTHORITIES);
+            if (authorities != null) {
+                if (!(authorities instanceof List<?> values)
+                        || values.stream().anyMatch(value -> !(value instanceof String text) || text.isBlank())) {
+                    throw new IllegalArgumentException("Invalid authorities claim");
+                }
+            }
+            Object attributes = claims.get(CLAIM_ATTRIBUTES);
+            if (attributes != null && !(attributes instanceof Map<?, ?>)) {
+                throw new IllegalArgumentException("Invalid attributes claim");
+            }
+        }
+    }
+
+    private void requireText(Object value, String claim) {
+        if (!(value instanceof String text) || text.isBlank()) {
+            throw new IllegalArgumentException("Missing or blank " + claim + " claim");
         }
     }
 
@@ -144,18 +184,9 @@ public class JwtTokenService {
 
     private JwtSession validateSession(Claims claims) {
         String sessionId = claims.get(CLAIM_SESSION_ID, String.class);
-        JwtSession session = sessionStore.findBySessionId(sessionId)
-                .orElseThrow(() -> new JwtTokenException("session does not exist"));
         Instant now = Instant.now();
-        if (session.isExpired() || session.getExpiresAt().isBefore(now)) {
-            throw new JwtTokenException("session has expired");
-        }
-        if (session.getActiveExpiresAt() != null && session.getActiveExpiresAt().isBefore(now)) {
-            sessionStore.expireSession(session.getSessionId());
-            throw new JwtTokenException("session active timeout has expired");
-        }
-        sessionStore.refresh(session.getSessionId(), now, activeExpiresAt(now));
-        return session;
+        return sessionStore.refreshIfValid(sessionId, now, activeExpiresAt(now))
+                .orElseThrow(() -> new JwtTokenException("session does not exist or has expired"));
     }
 
     @SuppressWarnings("unchecked")

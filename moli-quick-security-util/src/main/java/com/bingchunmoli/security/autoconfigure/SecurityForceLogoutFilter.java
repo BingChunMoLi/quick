@@ -7,6 +7,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.core.session.SessionInformation;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.web.authentication.logout.LogoutHandler;
@@ -36,7 +39,7 @@ public class SecurityForceLogoutFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         HttpSession session = request.getSession(false);
-        Authentication authentication = SecurityUtil.getAuthentication().orElse(null);
+        Authentication authentication = authentication(session);
 
         if (session != null) {
             SessionInformation sessionInformation = sessionRegistry.getSessionInformation(session.getId());
@@ -49,17 +52,35 @@ public class SecurityForceLogoutFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+
+        // A preceding servlet filter may see neither a session nor authentication before form login.
+        // The security proxy may also have cleared its thread context before returning here.
+        HttpSession authenticatedSession = request.getSession(false);
+        if (authenticatedSession != null) {
+            registerOrRefreshSession(authenticatedSession, authentication(authenticatedSession));
+        }
+    }
+
+    private Authentication authentication(HttpSession session) {
+        Authentication current = SecurityUtil.getAuthentication().orElse(null);
+        if (current != null || session == null) {
+            return current;
+        }
+        try {
+            Object stored = session.getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
+            if (stored instanceof SecurityContext context) {
+                Authentication saved = context.getAuthentication();
+                if (saved != null && saved.isAuthenticated() && !(saved instanceof AnonymousAuthenticationToken)) {
+                    return saved;
+                }
+            }
+        } catch (IllegalStateException invalidated) {
+            // The security chain or another request may have invalidated this session.
+        }
+        return null;
     }
 
     private void registerOrRefreshSession(HttpSession session, Authentication authentication) {
-        if (authentication == null) {
-            return;
-        }
-        SessionInformation sessionInformation = sessionRegistry.getSessionInformation(session.getId());
-        if (sessionInformation == null) {
-            sessionRegistry.registerNewSession(session.getId(), authentication.getPrincipal());
-            return;
-        }
-        sessionInformation.refreshLastRequest();
+        SecuritySessionRegistrationListener.registerOrRefreshSession(sessionRegistry, session, authentication);
     }
 }

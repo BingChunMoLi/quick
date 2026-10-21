@@ -1,0 +1,8 @@
+[
+  {"name":"ordinary text and case-sensitive path","method":"GET","path":"/Case/Transfer","parameters":{"q":"hello"},"expected":"get /Case/Transfer\nauthorization=&q=hello"},
+  {"name":"literal delimiters","method":"GET","path":"/transfer","parameters":{"title":"invoice&transfer=true"},"expected":"get /transfer\nauthorization=&title=invoice%26transfer%3Dtrue"},
+  {"name":"separate business flag","method":"GET","path":"/transfer","parameters":{"title":"invoice","transfer":"true"},"expected":"get /transfer\nauthorization=&title=invoice&transfer=true"},
+  {"name":"literal encoded delimiter","method":"GET","path":"/query","parameters":{"q":"a%26b"},"expected":"get /query\nauthorization=&q=a%2526b"},
+  {"name":"unicode and control characters","method":"GET","path":"/query","parameters":{"q":"中文 & = 100%\r\n😀"},"expected":"get /query\nauthorization=&q=中文 %26 %3D 100%25%0D%0A😀"},
+  {"name":"parameter names are escaped","method":"POST","path":"/query","parameters":{"name&=1\r\n":"%0A"},"expected":"post /query\nauthorization=&name%26%3D1%0D%0A=%250A"}
+]

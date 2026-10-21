@@ -6,14 +6,15 @@ import com.bingchunmoli.exception.SignConfigException;
 import com.bingchunmoli.properties.InterceptorsAutoConfigurationProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.Signature;
-import java.security.spec.InvalidKeySpecException;
+import java.security.GeneralSecurityException;
+import java.security.SignatureException;
+import com.bingchunmoli.exception.SignParamIllegalArgumentException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
@@ -33,21 +34,32 @@ public abstract class RSAAbstractSignUtil extends AbstractSignUtil {
         return completeVerification(signParam, doVerify(signParam));
     }
 
-    @SneakyThrows
     protected boolean doVerify(SignParamDTO signParam) {
-        Signature signature = Signature.getInstance(sign.getAlgorithm());
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        PublicKey publicKey;
+        Signature signature;
         try {
-            publicKey = keyFactory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(sign.getPublicKey().getBytes(StandardCharsets.UTF_8))));
-        } catch (InvalidKeySpecException e) {
-            throw new SignConfigException("公钥错误", e);
+            if (sign.getAlgorithm() == null) throw new IllegalArgumentException("Missing RSA signature algorithm");
+            signature = Signature.getInstance(sign.getAlgorithm());
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            if (sign.getPublicKey() == null) throw new IllegalArgumentException("Missing RSA public key");
+            PublicKey publicKey = keyFactory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(sign.getPublicKey())));
+            signature.initVerify(publicKey);
+            signature.update(signParam.getUnsignedStr().getBytes(StandardCharsets.UTF_8));
+        } catch (GeneralSecurityException | IllegalArgumentException failure) {
+            throw new SignConfigException("Invalid RSA signature algorithm or public key", failure);
         }
-        signature.initVerify(publicKey);
-        signature.update(signParam.getUnsignedStr().getBytes(StandardCharsets.UTF_8));
         if (log.isDebugEnabled()) {
             log.debug("doVerify, signParam: {}", signParam);
         }
-        return signature.verify(Base64.getDecoder().decode(signParam.getSignatureStr().getBytes(StandardCharsets.UTF_8)));
+        byte[] signatureBytes;
+        try {
+            signatureBytes = Base64.getDecoder().decode(signParam.getSignatureStr());
+        } catch (IllegalArgumentException failure) {
+            throw new SignParamIllegalArgumentException("Invalid RSA signature encoding");
+        }
+        try {
+            return signature.verify(signatureBytes);
+        } catch (SignatureException failure) {
+            throw new SignParamIllegalArgumentException("Invalid RSA signature length or format");
+        }
     }
 }

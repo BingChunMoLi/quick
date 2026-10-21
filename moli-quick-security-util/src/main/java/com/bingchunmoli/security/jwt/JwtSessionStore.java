@@ -21,6 +21,27 @@ public interface JwtSessionStore {
 
     void refresh(String sessionId, Instant lastAccessAt, Instant activeExpiresAt);
 
+    /**
+     * Validates the current session and refreshes it, returning only a live session.
+     * Distributed stores should override this with an atomic check/update. The default keeps
+     * existing custom implementations compatible and rechecks their state after refresh.
+     * Natural expiry must never unconditionally revoke a session from an earlier snapshot.
+     */
+    default Optional<JwtSession> refreshIfValid(String sessionId, Instant lastAccessAt, Instant activeExpiresAt) {
+        Optional<JwtSession> current = findBySessionId(sessionId).filter(session -> isLive(session, Instant.now()));
+        if (current.isEmpty()) {
+            return Optional.empty();
+        }
+        refresh(sessionId, lastAccessAt, activeExpiresAt);
+        return findBySessionId(sessionId).filter(session -> isLive(session, Instant.now()));
+    }
+
+    private static boolean isLive(JwtSession session, Instant now) {
+        return !session.isExpired()
+                && (session.getExpiresAt() == null || session.getExpiresAt().isAfter(now))
+                && (session.getActiveExpiresAt() == null || session.getActiveExpiresAt().isAfter(now));
+    }
+
     int expireByUserId(String userId);
 
     boolean expireSession(String sessionId);

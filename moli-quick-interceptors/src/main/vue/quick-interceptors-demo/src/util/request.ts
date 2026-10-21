@@ -4,6 +4,7 @@ import {ElMessage} from 'element-plus'
 import {type Result} from '@/interface'
 import router from '@/router'
 import {sign} from '@/util/sign'
+import {withRequestSignature} from '@/util/signed-request.mjs'
 
 export interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   noLoading?: boolean
@@ -32,39 +33,7 @@ class RequestHttp {
      */
     this.service.interceptors.request.use(
       (config: CustomAxiosRequestConfig) => {
-        const t = Date.now()
-        const nonce = Math.random().toString(10).slice(-8)
-        /**
-         * 协议 路径\n
-         * 请求参数 authorization=token&str=world
-         */
-        const signMap = new Map()
-        for (const key in config.params) {
-          if (Object.prototype.hasOwnProperty.call(config.params, key)) {
-            const element = config.params[key]
-            signMap.set(key, element)
-          }
-        }
-        if(config.data){
-          signMap.set('body', JSON.stringify(config.data))
-        }
-        signMap.set('authorization', '')
-        signMap.set('t', t)
-        signMap.set('nonce', nonce)
-        const sortMap = new Map([...signMap].sort())
-        let paramSignStr = ''
-        for (const [key, value] of sortMap) {
-          paramSignStr = paramSignStr + '&' + key + '=' + value
-        }
-        paramSignStr = paramSignStr.substring(1, paramSignStr.length)
-        const signStr = config.method?.toLocaleLowerCase() + ' ' + config.url?.toLocaleLowerCase() + '\n' + paramSignStr
-        if (config.headers && typeof config.headers.set === 'function') {
-          config.headers.set('Authorization', '')
-          config.headers.set('t', t)
-          config.headers.set('nonce', nonce)
-          config.headers.set('sign', sign(signStr))
-        }
-        return config
+        return withRequestSignature(config, request => this.service.getUri(request), sign)
       },
       (error: AxiosError) => {
         return Promise.reject(error)
@@ -102,7 +71,7 @@ class RequestHttp {
         // 根据服务器响应的错误状态码，做不同的处理
         // if (response) checkStatus(response.status);
         // 服务器结果都没有返回(可能服务器错误可能客户端断网)，断网处理:可以跳转到断网页面
-        if (!window.navigator.onLine) router.replace('/500')
+        if (typeof window !== 'undefined' && !window.navigator.onLine) router.replace('/500')
         return Promise.reject(error)
       }
     )
