@@ -90,6 +90,8 @@
             <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-qq</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-wechat</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-google</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-microsoft</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-apple</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-jdbc</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>com.bingchunmoli</groupId><artifactId>moli-quick-oauth-client-redis</artifactId><version>${project.version}</version></dependency>
             <dependency>

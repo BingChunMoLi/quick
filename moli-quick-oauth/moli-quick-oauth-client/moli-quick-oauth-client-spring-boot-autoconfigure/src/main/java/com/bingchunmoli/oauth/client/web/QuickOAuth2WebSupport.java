@@ -58,6 +58,9 @@ public final class QuickOAuth2WebSupport {
             });
             http.addFilterBefore(new OAuth2CallbackMetadataFilter(properties.getLogin().getCallbackBaseUri()),
                     OAuth2LoginAuthenticationFilter.class);
+            var csrf = http.getConfigurer(org.springframework.security.config.annotation.web.configurers.CsrfConfigurer.class);
+            if (csrf != null) csrf.ignoringRequestMatchers(new OAuth2FormPostRequestMatcher(states,
+                    properties.getLogin().getCallbackBaseUri()));
             http.oauth2Login(login -> login
                     .clientRegistrationRepository(registrations)
                     .authorizedClientRepository(clients)
@@ -71,7 +74,7 @@ public final class QuickOAuth2WebSupport {
                         try {
                             var token = (OAuth2AuthenticationToken) authentication;
                             var registration = registrations.findByRegistrationId(token.getAuthorizedClientRegistrationId());
-                            handler.onLogin(registry.identity(registration, token.getPrincipal()), token.getPrincipal(),
+                            handler.onLogin(registry.identity(registration, token.getPrincipal(), request.getParameterMap()), token.getPrincipal(),
                                     new AuthorizedClientRef(registration.getRegistrationId(), token.getName()), request, response);
                         } finally { TokenResponseMetadata.clear(); }
                     })

@@ -25,6 +25,10 @@ public interface OAuth2ProviderAdapter {
     default OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> authorizationCodeClient() { return null; }
     default OAuth2AccessTokenResponseClient<OAuth2RefreshTokenGrantRequest> refreshTokenClient() { return null; }
     default OAuth2UserService<OAuth2UserRequest, OAuth2User> userService() { return null; }
+    /** Called only after successful protocol authentication; callback fields are display data, not identity proof. */
+    default OAuth2Identity identity(ClientRegistration registration, OAuth2User user, Map<String, String[]> callback) {
+        return identity(registration, user);
+    }
     default OAuth2Identity identity(ClientRegistration registration, OAuth2User user) {
         String subject = user instanceof org.springframework.security.oauth2.core.oidc.user.OidcUser oidc
                 ? oidc.getIssuer() + "|" + oidc.getSubject() : user.getName();

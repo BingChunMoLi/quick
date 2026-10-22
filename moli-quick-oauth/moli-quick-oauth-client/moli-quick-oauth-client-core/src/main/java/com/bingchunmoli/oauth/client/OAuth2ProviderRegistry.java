@@ -25,8 +25,11 @@ public final class OAuth2ProviderRegistry {
         return adapters.get(providers.getOrDefault(registrationId, registrationId));
     }
     public OAuth2Identity identity(ClientRegistration registration, OAuth2User user) {
+        return identity(registration, user, Map.of());
+    }
+    public OAuth2Identity identity(ClientRegistration registration, OAuth2User user, Map<String, String[]> callback) {
         OAuth2ProviderAdapter adapter = adapter(registration.getRegistrationId());
-        if (adapter != null) return adapter.identity(registration, user);
+        if (adapter != null) return adapter.identity(registration, user, callback);
         String provider = providers.getOrDefault(registration.getRegistrationId(), registration.getRegistrationId());
         String subject = user instanceof OidcUser oidc ? oidc.getIssuer() + "|" + oidc.getSubject() : user.getName();
         return new OAuth2Identity(provider, subject, user.getAttribute("name"), user.getAttribute("picture"),

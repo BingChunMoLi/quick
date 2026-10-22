@@ -47,7 +47,7 @@ Quick 是按需组合的 Maven 多模块项目，覆盖数据访问、缓存、W
 
 ## 全部模块导航
 
-当前 reactor 包含 47 个 Maven 项目：根构建 POM 加下列 46 个模块。每个模块目录均有 README，聚合模块的文档进一步说明子模块关系。
+当前 reactor 包含 49 个 Maven 项目：根构建 POM 加下列 48 个模块。每个模块目录均有 README，聚合模块的文档进一步说明子模块关系。
 
 ### 基础组件、运行时与构建工具
 
@@ -102,6 +102,8 @@ Quick 是按需组合的 Maven 多模块项目，覆盖数据访问、缓存、W
 | [moli-quick-oauth-client-qq](moli-quick-oauth/moli-quick-oauth-client/moli-quick-oauth-client-qq/README.md) | QQ 互联网站登录 |
 | [moli-quick-oauth-client-wechat](moli-quick-oauth/moli-quick-oauth-client/moli-quick-oauth-client-wechat/README.md) | 微信网站扫码及公众号网页授权 |
 | [moli-quick-oauth-client-google](moli-quick-oauth/moli-quick-oauth-client/moli-quick-oauth-client-google/README.md) | Google OIDC 登录 |
+| [moli-quick-oauth-client-microsoft](moli-quick-oauth/moli-quick-oauth-client/moli-quick-oauth-client-microsoft/README.md) | Microsoft 个人及 Entra 工作/学校账号登录 |
+| [moli-quick-oauth-client-apple](moli-quick-oauth/moli-quick-oauth-client/moli-quick-oauth-client-apple/README.md) | Apple 网页登录、POST 回调及动态签名 |
 | [moli-quick-oauth-client-jdbc](moli-quick-oauth/moli-quick-oauth-client/moli-quick-oauth-client-jdbc/README.md) | 长期授权 JDBC 存储 |
 | [moli-quick-oauth-client-redis](moli-quick-oauth/moli-quick-oauth-client/moli-quick-oauth-client-redis/README.md) | 临时状态/长期授权/分布式刷新 |
 

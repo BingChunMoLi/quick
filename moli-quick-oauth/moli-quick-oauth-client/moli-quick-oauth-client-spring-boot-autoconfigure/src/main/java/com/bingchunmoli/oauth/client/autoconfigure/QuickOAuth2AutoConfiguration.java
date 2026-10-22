@@ -21,6 +21,8 @@ import org.springframework.security.oauth2.client.registration.*;
                 "com.bingchunmoli.oauth.client.qq.QqOAuth2AutoConfiguration",
                 "com.bingchunmoli.oauth.client.wechat.WeChatOAuth2AutoConfiguration",
                 "com.bingchunmoli.oauth.client.google.GoogleOAuth2AutoConfiguration",
+                "com.bingchunmoli.oauth.client.microsoft.MicrosoftOAuth2AutoConfiguration",
+                "com.bingchunmoli.oauth.client.apple.AppleOAuth2AutoConfiguration",
                 "com.bingchunmoli.oauth.client.jdbc.JdbcOAuth2AutoConfiguration",
                 "com.bingchunmoli.oauth.client.redis.RedisOAuth2AutoConfiguration"})
 @ConditionalOnProperty(prefix = "moli.oauth.client", name = "enabled", havingValue = "true")

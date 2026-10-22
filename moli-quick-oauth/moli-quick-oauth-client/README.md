@@ -16,6 +16,8 @@
 | `moli-quick-oauth-client-qq` | QQ 互联网站登录、OpenID 校验与令牌刷新 |
 | `moli-quick-oauth-client-wechat` | 网站扫码及公众号网页授权（userinfo/base） |
 | `moli-quick-oauth-client-google` | Google OIDC、PKCE 与可选离线授权 |
+| `moli-quick-oauth-client-microsoft` | Microsoft 个人/组织账号 OIDC、目录限制与 PKCE |
+| `moli-quick-oauth-client-apple` | Apple 网页 OIDC、POST 回调与动态 client secret |
 | `moli-quick-oauth-client-jdbc` | 将长期授权令牌保存到 JDBC 数据库 |
 | `moli-quick-oauth-client-redis` | 将临时授权状态或长期令牌保存到 Redis，并支持分布式刷新协调 |
 | `moli-quick-oauth-client-core` | OAuth 客户端核心 API，通常由 Starter 间接引入 |
@@ -139,7 +141,7 @@ moli:
 
 ## 渠道与子模块 README 导航
 
-[QQ、微信、Google 完整配置与协议差异](../CHANNELS.md)。OAuth Client 父模块只聚合构建，不作为运行时依赖；业务选择 Starter，再增加实际渠道/存储。子模块指南如下。
+[各渠道配置与协议差异](../CHANNELS.md)。OAuth Client 父模块只聚合构建，不作为运行时依赖；业务选择 Starter，再增加实际渠道/存储。子模块指南如下。
 
 | 模块 | 用途 |
 | --- | --- |
@@ -150,5 +152,7 @@ moli:
 | [moli-quick-oauth-client-qq](moli-quick-oauth-client-qq/README.md) | QQ 互联网站登录 |
 | [moli-quick-oauth-client-wechat](moli-quick-oauth-client-wechat/README.md) | 微信网站扫码及公众号网页授权 |
 | [moli-quick-oauth-client-google](moli-quick-oauth-client-google/README.md) | Google OIDC 登录 |
+| [moli-quick-oauth-client-microsoft](moli-quick-oauth-client-microsoft/README.md) | Microsoft 个人及 Entra 工作/学校账号登录 |
+| [moli-quick-oauth-client-apple](moli-quick-oauth-client-apple/README.md) | Apple 网页登录、POST 回调及动态签名 |
 | [moli-quick-oauth-client-jdbc](moli-quick-oauth-client-jdbc/README.md) | 长期授权 JDBC 存储 |
 | [moli-quick-oauth-client-redis](moli-quick-oauth-client-redis/README.md) | 临时状态/长期授权/分布式刷新 |

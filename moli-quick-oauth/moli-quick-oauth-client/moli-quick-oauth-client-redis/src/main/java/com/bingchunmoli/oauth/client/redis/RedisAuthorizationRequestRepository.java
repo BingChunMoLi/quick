@@ -42,9 +42,12 @@ public final class RedisAuthorizationRequestRepository implements AuthorizationR
         return null;
     }
     private void cookie(HttpServletRequest request, HttpServletResponse response, String state, String value, Duration maxAge) {
+        cookie(request, response, state, value, maxAge, false);
+    }
+    private void cookie(HttpServletRequest request, HttpServletResponse response, String state, String value, Duration maxAge, boolean formPost) {
         String path = request.getContextPath().isEmpty() ? "/" : request.getContextPath();
         response.addHeader("Set-Cookie", ResponseCookie.from(cookieName(state), value).path(path).httpOnly(true)
-                .secure(secure).sameSite("Lax").maxAge(maxAge).build().toString());
+                .secure(secure).sameSite(formPost ? "None" : "Lax").maxAge(maxAge).build().toString());
     }
     private OAuth2AuthorizationRequest read(HttpServletRequest request, boolean consume) {
         String state = request.getParameter("state");
@@ -58,13 +61,15 @@ public final class RedisAuthorizationRequestRepository implements AuthorizationR
     @Override public void saveAuthorizationRequest(OAuth2AuthorizationRequest authorization, HttpServletRequest request,
                                                    HttpServletResponse response) {
         if (authorization == null) { removeAuthorizationRequest(request, response); return; }
+        boolean formPost = "form_post".equals(authorization.getAdditionalParameters().get("response_mode"));
+        if (formPost && !secure) throw new IllegalStateException("OAuth2 form_post state cookies require HTTPS and cookie-secure=true");
         byte[] bytes = new byte[32]; random.nextBytes(bytes);
         String value = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         String state = authorization.getState();
         if (!Boolean.TRUE.equals(redis.opsForValue().setIfAbsent(prefix + hash(state), hash(value) + ":" + codec.encode(authorization), ttl))) {
             throw new IllegalStateException("OAuth2 state collision");
         }
-        cookie(request, response, state, value, ttl);
+        cookie(request, response, state, value, ttl, formPost);
     }
     @Override public OAuth2AuthorizationRequest removeAuthorizationRequest(HttpServletRequest request, HttpServletResponse response) {
         OAuth2AuthorizationRequest authorization = read(request, true);

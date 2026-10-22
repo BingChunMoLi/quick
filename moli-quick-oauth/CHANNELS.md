@@ -1,6 +1,6 @@
-# QQ、微信与 Google 登录
+# 第三方登录渠道
 
-三个渠道模块按需添加，与公共 Starter 配合使用；版本由 `moli-quick-dependencies` 管理。
+渠道模块按需添加，与公共 Starter 配合使用；版本由 `moli-quick-dependencies` 管理。GitHub 见 [公共接入](README.md)，Microsoft 和 Apple 的完整示例见下方专门指南。
 
 ```xml
 <dependency>
@@ -68,6 +68,8 @@ spring:
 | 微信开放平台网站扫码 | `wechat` | `snsapi_login` | `/oauth2/authorization/wechat` | `/login/oauth2/code/wechat` |
 | 微信内公众号网页授权 | `wechat-mp` | `snsapi_userinfo` | `/oauth2/authorization/wechat-mp` | `/login/oauth2/code/wechat-mp` |
 | Google OIDC | `google` | `openid,profile,email` | `/oauth2/authorization/google` | `/login/oauth2/code/google` |
+| Microsoft 个人/组织账号 | `microsoft` | `openid,profile,email` | `/oauth2/authorization/microsoft` | `/login/oauth2/code/microsoft` |
+| Apple 网站登录 | `apple` | 内部 `openid,name,email`，发给 Apple 为 `name email` | `/oauth2/authorization/apple` | `/login/oauth2/code/apple`（POST） |
 
 回调完整地址为 `{baseUrl}` 加回调路径，需在各平台登记公共 HTTPS 地址/授权回调域名。多应用可使用其他 registrationId，只要指定上表 provider；入口和回调中的末段同步变为该 registrationId。显式 `registration/provider` 配置覆盖渠道默认值。宿主自定义仓库可通过 `moli.oauth.client.provider-mappings.<registrationId>` 关联适配器。
 
@@ -110,9 +112,15 @@ Google 使用 S256 PKCE 和原生 OIDC nonce/签名/issuer/audience/有效期校
 
 `moli.oauth.client.google.offline=true` 添加 `access_type=offline`；Google 不保证每次授权都返回新的 refresh token，`prompt=consent` 仅在确有重新授权需求时配置。同一 registration 和原生用户再次登录时，未返回 refresh token 会保留已保存的刷新令牌；返回同一个令牌但未返回有效期时保留原有效期，返回新令牌时以新响应为准。不同用户之间不继承刷新令牌；需要彻底清除授权时调用 `QuickOAuth2Client.remove(ref)`。本模块的 Google 渠道面向用户授权码/OIDC 登录，不实现 service account，也不支持该渠道的 `client_credentials`。
 
+## Microsoft 与 Apple
+
+[Microsoft 接入指南](moli-quick-oauth-client/moli-quick-oauth-client-microsoft/README.md) 包含 common/organizations/consumers/目录 GUID、可选租户白名单、PKCE 和离线授权；使用 issuer + sub 区分目录身份，并校验签名密钥 issuer。
+
+[Apple 接入指南](moli-quick-oauth-client/moli-quick-oauth-client-apple/README.md) 包含 Services ID、Team/Key ID、P-256 私钥动态签名或静态 client-secret JWT、首次姓名和隐藏邮箱处理。Apple 使用 form_post：默认 Session 状态需要 SameSite=None + Secure；Redis 状态 Cookie 自动按此方式设置。只豁免有效待处理回调的 CSRF Token，业务 POST 保持宿主防护。
+
 ## API、存储与调试
 
-三个渠道继续使用公共 `QuickOAuth2Client.authorize(ref)`、内存/JDBC/Redis 存储和刷新协调器。Google API 可直接使用公共 Bearer `restClient`。QQ/微信的许多 API 要求 query 参数中的 access_token、AppID/OpenID；公共 Bearer 拦截器不会将其自动转换，宿主应在服务端取得授权后按对应 API 规则调用，不向浏览器返回 Token。
+各渠道继续使用公共 `QuickOAuth2Client.authorize(ref)`、内存/JDBC/Redis 存储和刷新协调器。Google/Microsoft 的标准 Bearer API 可使用公共 `restClient`。QQ/微信的许多 API 要求 query 参数中的 access_token、AppID/OpenID；公共 Bearer 拦截器不会将其自动转换，宿主应在服务端取得授权后按对应 API 规则调用，不向浏览器返回 Token。
 
 QQ/微信协议要求的 GET 请求包含敏感参数，默认异常只保留脱敏说明；不要在生产中开启记录完整 URI 的 HTTP/代理调试日志。无需为这些渠道关闭 CSRF 或全局改变 Session 策略。
 

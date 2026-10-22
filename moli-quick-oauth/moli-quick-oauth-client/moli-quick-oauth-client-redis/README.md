@@ -48,9 +48,9 @@ spring:
 
 ## 临时状态
 
-每次授权独立保存请求、PKCE verifier/OIDC nonce，并通过短期 HttpOnly/SameSite=Lax Cookie 绑定浏览器。匹配后原子消费，拒绝过期和重放；模块不创建 HttpSession。宿主仍需自行配置业务链的请求缓存和 Session 策略。
+每次授权独立保存请求、PKCE verifier/OIDC nonce，并通过短期 HttpOnly Cookie 绑定浏览器。GET/query 渠道使用 SameSite=Lax；Apple 等 form_post 渠道自动使用 SameSite=None + Secure，使跨站 POST 可以携带状态 Cookie。匹配后原子消费，拒绝过期和重放；模块不创建 HttpSession。宿主仍需自行配置业务链的请求缓存和 Session 策略。
 
-默认 Secure Cookie，本地 HTTP 调试显式关闭 cookie-secure；生产保持 HTTPS。支持多标签页和跨实例回调。
+默认 Secure Cookie，GET/query 渠道本地 HTTP 调试可显式关闭 cookie-secure；form_post 必须保持 cookie-secure=true 并使用 HTTPS。支持多标签页和跨实例回调。
 
 ## 长期存储与刷新
 

@@ -52,7 +52,7 @@ jobs:
           OAUTH_TEST_POSTGRESQL_PASSWORD: test-only-password
           OAUTH_TEST_REDIS_PORT: '6379'
         run: >-
-          mvn -B -ntp -pl :moli-quick-oauth-auth-server-spring-boot-starter,:moli-quick-oauth-resource-server-spring-boot-starter,:moli-quick-oauth-client-github,:moli-quick-oauth-client-qq,:moli-quick-oauth-client-wechat,:moli-quick-oauth-client-google,:moli-quick-oauth-client-jdbc,:moli-quick-oauth-client-redis,:moli-quick-oauth-client-spring-boot-starter
+          mvn -B -ntp -pl :moli-quick-oauth-auth-server-spring-boot-starter,:moli-quick-oauth-resource-server-spring-boot-starter,:moli-quick-oauth-client-github,:moli-quick-oauth-client-qq,:moli-quick-oauth-client-wechat,:moli-quick-oauth-client-google,:moli-quick-oauth-client-microsoft,:moli-quick-oauth-client-apple,:moli-quick-oauth-client-jdbc,:moli-quick-oauth-client-redis,:moli-quick-oauth-client-spring-boot-starter
           -am -Poauth-it -Dgpg.skip=true -Dmaven.javadoc.skip=true -Dmaven.compiler.proc=full verify
 
       - uses: actions/setup-python@v5

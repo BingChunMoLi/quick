@@ -7,7 +7,7 @@
 
 Java 17 / Spring Boot 4.1，基于 Spring Security OAuth2，分别提供 Client、Authorization Server 和 Resource Server。支持第三方登录、标准授权/OIDC、JWT/opaque API 鉴权，以及按需选择的 JDBC / Redis 存储。三个角色分别启用、按应用职责组合。
 
-QQ、微信和 Google 的依赖、完整配置、身份规则及手工验证见 [渠道接入说明](CHANNELS.md)。这些渠道按需添加，继续复用下方宿主安全链和登录处理器。
+内置 GitHub、QQ、微信、Google、Microsoft 和 Apple 渠道，按需添加并复用下方宿主安全链和登录处理器。[渠道接入说明](CHANNELS.md) 提供导航；新增渠道的完整配置见 [Microsoft](moli-quick-oauth-client/moli-quick-oauth-client-microsoft/README.md) 和 [Apple](moli-quick-oauth-client/moli-quick-oauth-client-apple/README.md)。
 
 ## 模块导航
 
@@ -125,7 +125,7 @@ moli:
         key-prefix: my-app:oauth2
 ```
 
-自定义回调路径时同时设置原生 registration 的 `redirect-uri`。本地 HTTP 调试显式设 `cookie-secure: false`；生产 HTTPS 保持默认 true。Redis 临时状态通过每次授权独立的 HttpOnly / SameSite=Lax Cookie 绑定浏览器，支持多标签页、跨实例回调及一次性消费，适用于宿主 `STATELESS` 安全链。首版以 GET/query 授权回调为目标。
+自定义回调路径时同时设置原生 registration 的 `redirect-uri`。Redis 临时状态通过每次授权独立的 HttpOnly Cookie 绑定浏览器，支持多标签页、跨实例回调及一次性消费，适用于宿主 `STATELESS` 安全链。普通 GET/query 回调保持 SameSite=Lax，本地 HTTP 调试可显式设 `cookie-secure: false`；Apple form_post 回调自动使用 SameSite=None + Secure，要求 HTTPS。默认 Session 状态存储接入 Apple 时，由宿主配置 Session Cookie 的 SameSite=None + Secure，详见 Apple 指南。公共 configurer 只对绑定到当前浏览器、仍待处理且路径匹配的 form_post 回调豁免 CSRF Token，不豁免其他业务 POST。
 
 选择 Redis 需增加 `moli-quick-oauth-client-redis`，由宿主提供 `StringRedisTemplate` 和连接配置，例如引入 Boot 的 Redis Starter。共享 Redis 时必须为不同应用/环境配置不同的 `redis.key-prefix`（默认 `moli:oauth2`），同一应用各实例保持一致。临时状态和长期令牌可独立选用 Redis。Redis 长期存储默认启用共享刷新协调；JDBC 需分布式协调时添加 Redis 模块并设置 `refresh.coordination: redis`。`local` 仅协调当前进程；没有分布式协调的 JDBC 多实例部署可能同时刷新同一授权。
 
@@ -178,7 +178,7 @@ OAUTH_TEST_REDIS_PORT=6379
 ```
 
 ```bash
-mvn -B -ntp -pl :moli-quick-oauth-client-github,:moli-quick-oauth-client-qq,:moli-quick-oauth-client-wechat,:moli-quick-oauth-client-google,:moli-quick-oauth-client-jdbc,:moli-quick-oauth-client-redis,:moli-quick-oauth-client-spring-boot-starter -am -Poauth-it -Dgpg.skip=true -Dmaven.javadoc.skip=true verify
+mvn -B -ntp -pl :moli-quick-oauth-client-github,:moli-quick-oauth-client-qq,:moli-quick-oauth-client-wechat,:moli-quick-oauth-client-google,:moli-quick-oauth-client-microsoft,:moli-quick-oauth-client-apple,:moli-quick-oauth-client-jdbc,:moli-quick-oauth-client-redis,:moli-quick-oauth-client-spring-boot-starter -am -Poauth-it -Dgpg.skip=true -Dmaven.javadoc.skip=true verify
 ```
 
 上述命令使用 JDK 17；本仓库使用 JDK 23+ 构建时额外添加 `-Dmaven.compiler.proc=full` 以启用现有模块的注解处理。JDBC 测试要求授权表不存在，创建成功后才负责删除；Redis 测试使用独立随机授权标识，不执行 FLUSHDB。CI 提供真实 MySQL/PostgreSQL/Redis 服务。

@@ -45,6 +45,10 @@ moli:
 
 Web 用户服务使用 Bean 名 `quickOAuth2UserService`、`quickOidcUserService`；失败处理器名为 `quickOAuth2FailureHandler`。登录启用后必须提供 OAuth2LoginHandler 并将 Quick configurer 应用到宿主 SecurityFilterChain，否则启动失败。非 Servlet 应用不能启用浏览器登录。
 
+OIDC 渠道可以实现 OidcProviderAdapter 定制 ID Token decoder 和原生 OIDC 用户服务；未定制时使用 Spring 默认行为。宿主提供 JwtDecoderFactory<ClientRegistration> Bean 时公共 decoder 工厂退让，宿主需保留相应渠道的 issuer、签名、audience、有效期与租户校验。普通 OAuth2ProviderAdapter 的既有方法保持兼容；新增带 callback 参数的 identity 重载仅在认证成功后提供浏览器展示资料，不将这些字段作为身份凭证。
+
+支持受 state/浏览器/回调路径约束的 form_post CSRF 豁免。已有宿主 CSRF 配置继续生效；不会全局关闭或重新启用 CSRF。Apple 的 Session/Redis Cookie 配置见对应渠道指南。
+
 Quick 启用时仅排除 Boot 原生 OAuth2 Web 自动配置，避免其创建意外的 OAuth 登录安全链；Quick 不创建业务链，也不改变宿主整体 CSRF/Session 策略。关闭 Quick 不干预 Boot 原生行为。
 
 ## 存储与限制

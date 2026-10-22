@@ -33,7 +33,7 @@ Quick 依赖 BOM，packaging 为 pom，用于对齐各业务组件版本，不�
 
 ## 管理范围
 
-覆盖 common-beans、AOP、Redis、MyBatis-Plus 运行时、签名拦截器、Security、幂等、限流、Web、代码生成器子模块、对象存储子模块，以及 OAuth Client（含 GitHub/QQ/微信/Google）、Authorization Server、Resource Server 子模块。完整清单以 [pom.xml](pom.xml) 为准。
+覆盖 common-beans、AOP、Redis、MyBatis-Plus 运行时、签名拦截器、Security、幂等、限流、Web、代码生成器子模块、对象存储子模块，以及 OAuth Client（含 GitHub/QQ/微信/Google/Microsoft/Apple）、Authorization Server、Resource Server 子模块。完整清单以 [pom.xml](pom.xml) 为准。
 
 聚合父模块、演示应用 `moli-quick-spring-boot-starter-common-test` 和旧的 `moli-quick-mybatis-plus-generate` 不应被误认为都在此 BOM 的直接列表内。Maven 插件版本仍应在 plugin 声明中显式指定，BOM 不管理 pluginManagement。
 

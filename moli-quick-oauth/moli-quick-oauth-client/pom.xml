@@ -13,6 +13,8 @@
         <module>moli-quick-oauth-client-qq</module>
         <module>moli-quick-oauth-client-wechat</module>
         <module>moli-quick-oauth-client-google</module>
+        <module>moli-quick-oauth-client-microsoft</module>
+        <module>moli-quick-oauth-client-apple</module>
         <module>moli-quick-oauth-client-jdbc</module>
         <module>moli-quick-oauth-client-redis</module>
     </modules>

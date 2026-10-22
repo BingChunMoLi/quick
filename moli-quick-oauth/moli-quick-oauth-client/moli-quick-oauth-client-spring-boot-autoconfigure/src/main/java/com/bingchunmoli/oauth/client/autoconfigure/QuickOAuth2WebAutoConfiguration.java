@@ -2,7 +2,9 @@ package com.bingchunmoli.oauth.client.autoconfigure;
 
 import com.bingchunmoli.oauth.client.*;
 import com.bingchunmoli.oauth.client.web.*;
+import com.bingchunmoli.oauth.client.oidc.OidcProviderAdapter;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -10,12 +12,16 @@ import org.springframework.boot.autoconfigure.condition.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.oidc.userinfo.*;
+import org.springframework.security.oauth2.client.oidc.authentication.OidcIdTokenDecoderFactory;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.userinfo.*;
 import org.springframework.security.oauth2.client.web.*;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtDecoderFactory;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 
 @AutoConfiguration(after = QuickOAuth2AutoConfiguration.class,
@@ -45,7 +51,25 @@ public class QuickOAuth2WebAutoConfiguration {
         };
     }
     @Bean(name = "quickOidcUserService") @ConditionalOnMissingBean(name = "quickOidcUserService")
-    OAuth2UserService<OidcUserRequest, OidcUser> quickOidcUserService() { return new OidcUserService(); }
+    OAuth2UserService<OidcUserRequest, OidcUser> quickOidcUserService(OAuth2ProviderRegistry registry) {
+        var fallback = new OidcUserService();
+        return request -> {
+            var adapter = registry.adapter(request.getClientRegistration().getRegistrationId());
+            var service = adapter instanceof OidcProviderAdapter oidc ? oidc.oidcUserService() : null;
+            return (service == null ? fallback : service).loadUser(request);
+        };
+    }
+
+    @Bean @ConditionalOnMissingBean(JwtDecoderFactory.class)
+    JwtDecoderFactory<ClientRegistration> quickOidcIdTokenDecoderFactory(OAuth2ProviderRegistry registry) {
+        var fallback = new OidcIdTokenDecoderFactory();
+        var decoders = new ConcurrentHashMap<ClientRegistration, JwtDecoder>();
+        return registration -> decoders.computeIfAbsent(registration, value -> {
+            var adapter = registry.adapter(value.getRegistrationId());
+            var decoder = adapter instanceof OidcProviderAdapter oidc ? oidc.idTokenDecoder(value) : null;
+            return decoder == null ? fallback.createDecoder(value) : decoder;
+        });
+    }
 
     @Bean(name = "quickOAuth2FailureHandler") @ConditionalOnMissingBean(name = "quickOAuth2FailureHandler")
     AuthenticationFailureHandler quickOAuth2FailureHandler() {
