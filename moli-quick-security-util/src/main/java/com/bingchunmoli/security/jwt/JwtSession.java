@@ -1,5 +1,7 @@
 package com.bingchunmoli.security.jwt;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.time.Instant;
 
 /**
@@ -7,7 +9,10 @@ import java.time.Instant;
  *
  * @author MoLi
  */
-public class JwtSession {
+public class JwtSession implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     private String sessionId;
 

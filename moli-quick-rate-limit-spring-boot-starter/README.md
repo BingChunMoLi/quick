@@ -37,6 +37,8 @@ public Order createOrder(Long userId, CreateOrderRequest request) {
 参数别名 `#p0`、`#a0` 始终可用；编译时保留参数名后也可以使用 `#userId`。
 不配置 `key` 时，同一方法的所有调用共享一个全局限流桶。
 
+未指定 `namespace` 时，默认使用声明类名和方法名；同一声明类的真实重载方法会追加参数类型，各自使用独立的限流桶。非重载方法的现有 Key 格式保持不变，编译器生成的桥接方法不算重载。需要跨方法共享配额时，可显式指定相同 namespace 和 key 维度。
+
 ## 存储配置
 
 ### 内存模式

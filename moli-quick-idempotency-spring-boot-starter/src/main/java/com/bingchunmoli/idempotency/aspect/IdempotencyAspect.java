@@ -110,16 +110,26 @@ public class IdempotencyAspect extends AbstractPointcutAdvisor implements Method
             if (idempotent.releaseOnFailure() && result instanceof CompletionStage<?> stage) {
                 return stage.whenComplete((ignored, failure) -> {
                     if (failure != null) {
-                        store.release(token);
+                        releaseAfterFailure(token, failure);
                     }
                 });
             }
             return result;
         } catch (Throwable failure) {
             if (idempotent.releaseOnFailure()) {
-                store.release(token);
+                releaseAfterFailure(token, failure);
             }
             throw failure;
+        }
+    }
+
+    private void releaseAfterFailure(IdempotencyToken token, Throwable failure) {
+        try {
+            store.release(token);
+        } catch (RuntimeException cleanupFailure) {
+            if (cleanupFailure != failure) {
+                failure.addSuppressed(cleanupFailure);
+            }
         }
     }
 

@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -41,9 +42,20 @@ public class DefaultIdempotencyKeyResolver implements IdempotencyKeyResolver {
                 : digestArguments(method, arguments);
         String namespace = StringUtils.hasText(idempotent.namespace())
                 ? idempotent.namespace().trim()
-                : method.getDeclaringClass().getName() + "." + method.getName();
+                : defaultNamespace(method);
         String prefix = requireText(properties.getKeyPrefix(), "moli.idempotency.key-prefix");
         return prefix + ":" + namespace + ":" + requireText(businessKey, "resolved idempotency key");
+    }
+
+    private String defaultNamespace(Method method) {
+        String namespace = method.getDeclaringClass().getName() + "." + method.getName();
+        boolean overloaded = Arrays.stream(method.getDeclaringClass().getDeclaredMethods())
+                .anyMatch(candidate -> !candidate.isBridge() && !candidate.isSynthetic()
+                        && candidate.getName().equals(method.getName())
+                        && !Arrays.equals(candidate.getParameterTypes(), method.getParameterTypes()));
+        // Preserve existing keys for ordinary methods; compiler bridges are not business overloads.
+        return overloaded ? namespace + "(" + String.join(",", Arrays.stream(method.getParameterTypes())
+                .map(Class::getTypeName).toList()) + ")" : namespace;
     }
 
     private String evaluateExpression(Object target, Method method, Object[] arguments, String expression) {

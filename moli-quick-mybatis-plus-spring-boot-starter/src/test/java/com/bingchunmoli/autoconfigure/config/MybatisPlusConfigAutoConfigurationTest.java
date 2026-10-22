@@ -8,6 +8,8 @@ import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInt
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class MybatisPlusConfigAutoConfigurationTest {
@@ -23,7 +25,9 @@ class MybatisPlusConfigAutoConfigurationTest {
 
     @Test
     void mybatisPlusInterceptorShouldContainExpectedInnerInterceptors() {
-        MybatisPlusInterceptor interceptor = configuration.mybatisPlusInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
+        MybatisPlusInterceptor interceptor = configuration.mybatisPlusInterceptor(
+                new PaginationInnerInterceptor(DbType.MYSQL), List.of(
+                        configuration.optimisticLockerInnerInterceptor(), configuration.blockAttackInnerInterceptor()));
 
         assertThat(interceptor.getInterceptors())
                 .hasSize(3)

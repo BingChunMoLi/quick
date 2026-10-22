@@ -22,7 +22,7 @@ public @interface RateLimit {
     String key() default "";
 
     /**
-     * Optional logical namespace. By default, the declaring class and method name are used.
+     * Optional logical namespace. Defaults to declaring class and method name, adding parameter types for overloads.
      */
     String namespace() default "";
 

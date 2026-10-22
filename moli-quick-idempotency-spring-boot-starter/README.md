@@ -33,8 +33,12 @@ public Order createOrder(CreateOrderRequest request) {
 保留到 TTL 到期；调用抛出异常时默认释放 Key，允许业务重试。`CompletionStage`
 异步失败同样会释放 Key。
 
+若存储在释放 Key 时发生运行时异常，原业务异常仍会传播，释放异常记录在其 `suppressed` 异常中；存储未成功释放的 Key 仍需等待 TTL 到期。
+
 参数别名 `#p0`、`#a0` 始终可用；编译时保留参数名后也可以使用 `#request`。
 不配置 `key` 时，将使用方法签名和参数 JSON 的 SHA-256 摘要。
+
+未指定 `namespace` 时，默认使用声明类名和方法名；同一声明类的真实重载方法会追加参数类型，避免相同业务 key 互相阻断。非重载方法的现有 Key 格式保持不变，编译器生成的桥接方法不算重载。显式指定相同 namespace 的方法仍可共享业务 key。
 
 摘要优先使用宿主 Jackson 2 Mapper；缺失时使用内部 Mapper，并注册已安装的 Jackson 2 模块（含 JavaTime）。Boot 4 的 Jackson 3 自定义序列化设置不会自动应用于这套兼容 Mapper。需要精确定义幂等维度时使用显式业务 key，或提供自定义 KeyResolver。
 

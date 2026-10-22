@@ -29,6 +29,8 @@ RedisUtil 固定使用名为 `redisTemplate` 的模板，兼容 Boot 的 Object/
 
 已有 Boot 或宿主模板保持原序列化方式，Boot 默认值仍为 JDK 序列化。仅当缺少此模板、且存在唯一连接工厂候选时，Quick 才创建使用字符串 key / Jackson 2 JSON value 的模板。更换已有缓存的序列化格式需要宿主自行迁移数据。
 
+JWT 会话和用户对象支持 JDK 序列化，可与 Boot 默认模板组合使用；自定义用户属性的整个对象图也需要可序列化。使用原有 JSON 模板时，不改变 JWT 会话格式或 Redis Key。
+
 需要显式使用 Quick JSON 序列化器时，可声明：
 
 ```java
@@ -63,6 +65,12 @@ moli:
 
 默认方言仍为 MySQL。可使用属性或提供 PaginationInnerInterceptor Bean，默认插件组合会使用该实例；需要完全自定义时继续提供 MybatisPlusInterceptor。`enabled=false` 只关闭 Quick 插件和填充逻辑，不关闭原生 MP 集成。
 
+默认组合也收集宿主声明的租户、数据权限等 InnerInterceptor Bean，并保留 Spring 排序；分页放在最后，使数据查询及总数统计经过相同的租户和权限过滤。乐观锁和全表保护插件支持同类型 Bean 替换。
+
+## Windows Java 17 构建
+
+根 POM 统一固定 UTF-8 源码及报告编码，子模块继承该设置。Windows Java 17 使用 GBK 默认字符集时，也可直接执行项目总览中的构建命令，无需额外指定源码编码。
+
 ## 宿主 Bean 替换
 
 - 签名模块：SignUtil、SignInterceptor、InterceptorsRegistrar 和 CacheFilter 支持按类型覆盖，组合使用选定实例。
@@ -78,3 +86,11 @@ moli:
 - 生成器对 Spring MVC 请求错误保留 HTTP 状态和协议头，例如不支持 Content-Type 返回 415；内部错误继续使用脱敏 500。
 
 Security、MyBatis-Plus、旧生成器及 OAuth 渠道补充了配置元数据。仓库新增 Starter 回归工作流，覆盖全模块后端验证和两个前端的测试、类型检查与构建；已有 OAuth 真实存储集成工作流保留。
+
+## 幂等和限流的重载方法
+
+未显式设置 namespace 时，同一声明类中的真实重载方法会在默认 namespace 后追加参数类型，避免防重 Key 或限流桶互相影响。非重载方法和显式 namespace 的 Key 格式不变；编译器桥接方法不触发该调整。需要有意共享防重范围或配额时，使用相同的显式 namespace 和业务 key 维度。
+
+使用 Redis 且依赖默认 namespace 的重载方法需要协调部署：升级前后这些方法的 Key 不同，混合版本会短暂使用独立的防重窗口或限流桶。稳定的显式 namespace 可用于明确管理跨版本的共享范围。
+
+幂等释放失败时保留原业务异常，存储释放异常作为 suppressed 异常附加；未成功释放的 Key 仍由 TTL 兜底。标准 Authorization/Bearer 组合接受认证方案大小写变化，Token 内容及自定义 Header/前缀的匹配方式保持原样。

@@ -21,7 +21,7 @@
 
 | Bean | 行为 |
 | --- | --- |
-| `MybatisPlusInterceptor` | 依次加入乐观锁、全表更新/删除阻断、分页拦截器 |
+| `MybatisPlusInterceptor` | 按 Spring 顺序合并宿主与默认插件，分页放在最后 |
 | `PaginationInnerInterceptor` | 默认 `DbType.MYSQL` |
 | `CommonMetaHandler` | 插入填充 `createTime`；更新填充 `updateTime`，类型为 `LocalDateTime` |
 
@@ -48,7 +48,9 @@ moli:
     db-type: POSTGRE_SQL
 ```
 
-需要调整整个插件组合时，可以提供：
+声明 `TenantLineInnerInterceptor`、数据权限等 `InnerInterceptor` Bean 即可加入默认组合，无需重新声明整个 MybatisPlusInterceptor。宿主插件的 `Ordered`/`@Order` 顺序会保留，分页在其后执行，使分页查询与总数统计应用相同的租户、权限条件。乐观锁和全表操作保护也会使用宿主提供的同类型 Bean。分页应配置单个实例；多个实例时需要通过 `@Primary` 明确选择。
+
+需要完全接管插件组合时，可以提供：
 
 ```java
 @Bean

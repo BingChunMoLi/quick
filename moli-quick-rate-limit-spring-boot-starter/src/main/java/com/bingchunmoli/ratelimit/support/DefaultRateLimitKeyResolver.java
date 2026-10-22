@@ -12,6 +12,7 @@ import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
 import java.util.Objects;
+import java.util.Arrays;
 
 /**
  * Resolves SpEL dimensions and method-global default keys.
@@ -35,9 +36,20 @@ public class DefaultRateLimitKeyResolver implements RateLimitKeyResolver {
                 : GLOBAL_DIMENSION;
         String namespace = StringUtils.hasText(rateLimit.namespace())
                 ? rateLimit.namespace().trim()
-                : method.getDeclaringClass().getName() + "." + method.getName();
+                : defaultNamespace(method);
         String prefix = requireText(properties.getKeyPrefix(), "moli.rate-limit.key-prefix");
         return prefix + ":" + namespace + ":" + requireText(dimension, "resolved rate limit key");
+    }
+
+    private String defaultNamespace(Method method) {
+        String namespace = method.getDeclaringClass().getName() + "." + method.getName();
+        boolean overloaded = Arrays.stream(method.getDeclaringClass().getDeclaredMethods())
+                .anyMatch(candidate -> !candidate.isBridge() && !candidate.isSynthetic()
+                        && candidate.getName().equals(method.getName())
+                        && !Arrays.equals(candidate.getParameterTypes(), method.getParameterTypes()));
+        // Preserve existing keys for ordinary methods; compiler bridges are not business overloads.
+        return overloaded ? namespace + "(" + String.join(",", Arrays.stream(method.getParameterTypes())
+                .map(Class::getTypeName).toList()) + ")" : namespace;
     }
 
     private String evaluateExpression(Object target, Method method, Object[] arguments, String expression) {

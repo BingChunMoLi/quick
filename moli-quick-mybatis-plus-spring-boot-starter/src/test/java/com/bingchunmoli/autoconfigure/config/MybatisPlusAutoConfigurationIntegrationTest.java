@@ -4,11 +4,13 @@ import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.core.Ordered;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -16,6 +18,30 @@ class MybatisPlusAutoConfigurationIntegrationTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(MybatisPlusConfigAutoConfiguration.class));
+
+    @Test
+    void preservesHostPluginOrderAndReplacesDefaultProtectionInstances() {
+        var first = new OrderedPlugin(10);
+        var second = new OrderedPlugin(20);
+        var optimistic = new OptimisticLockerInnerInterceptor();
+        var blockAttack = new BlockAttackInnerInterceptor();
+        contextRunner.withBean("secondPlugin", InnerInterceptor.class, () -> second)
+                .withBean("firstPlugin", InnerInterceptor.class, () -> first)
+                .withBean(OptimisticLockerInnerInterceptor.class, () -> optimistic)
+                .withBean(BlockAttackInnerInterceptor.class, () -> blockAttack)
+                .run(context -> {
+                    assertThat(context).hasNotFailed().hasSingleBean(OptimisticLockerInnerInterceptor.class)
+                            .hasSingleBean(BlockAttackInnerInterceptor.class);
+                    assertThat(context.getBean(MybatisPlusInterceptor.class).getInterceptors())
+                            .hasSize(5).startsWith(first, second).contains(optimistic, blockAttack)
+                            .last().isSameAs(context.getBean(PaginationInnerInterceptor.class));
+                });
+    }
+
+    private record OrderedPlugin(int order) implements InnerInterceptor, Ordered {
+        @Override
+        public int getOrder() { return order; }
+    }
 
     @Test
     void shouldAutoConfigureExpectedMybatisPlusInfrastructureForBoot406() {

@@ -3,10 +3,13 @@ package com.bingchunmoli.idempotency.autoconfigure;
 import com.bingchunmoli.idempotency.annotation.Idempotent;
 import com.bingchunmoli.idempotency.aspect.IdempotencyAspect;
 import com.bingchunmoli.idempotency.core.IdempotencyStore;
+import com.bingchunmoli.idempotency.core.IdempotencyToken;
 import com.bingchunmoli.idempotency.exception.DuplicateRequestException;
 import com.bingchunmoli.idempotency.store.InMemoryIdempotencyStore;
 import com.bingchunmoli.idempotency.store.RedisIdempotencyStore;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.aop.AopAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -17,11 +20,17 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 
 class IdempotencyAutoConfigurationTest {
 
@@ -30,6 +39,64 @@ class IdempotencyAutoConfigurationTest {
                     AopAutoConfiguration.class,
                     RedisIdempotencyAutoConfiguration.class,
                     IdempotencyAutoConfiguration.class));
+
+    @Test
+    void overloadedDefaultNamespacesAreIndependent() {
+        contextRunner.withUserConfiguration(TestConfiguration.class).run(context -> {
+            var service = context.getBean(TestService.class);
+            assertThat(service.overloaded("1")).isEqualTo("string");
+            assertThat(service.overloaded(1L)).isEqualTo("long");
+            assertThatThrownBy(() -> service.overloaded("1")).isInstanceOf(DuplicateRequestException.class);
+            assertThatThrownBy(() -> service.overloaded(1L)).isInstanceOf(DuplicateRequestException.class);
+        });
+    }
+
+    @Test
+    void explicitNamespacesCanStillShareKeysAcrossOverloads() {
+        contextRunner.withUserConfiguration(TestConfiguration.class).run(context -> {
+            var service = context.getBean(TestService.class);
+            service.shared("1");
+            assertThatThrownBy(() -> service.shared(1L)).isInstanceOf(DuplicateRequestException.class);
+        });
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void cleanupFailuresPreserveBusinessException(boolean sameFailure) {
+        var original = new IllegalArgumentException("business rejected");
+        RuntimeException cleanup = sameFailure ? original : new IllegalStateException("release unavailable");
+        var store = mock(IdempotencyStore.class);
+        var token = new IdempotencyToken("test-key", "owner");
+        when(store.tryAcquire(anyString(), any())).thenReturn(Optional.of(token));
+        doThrow(cleanup).when(store).release(token);
+        contextRunner.withBean(IdempotencyStore.class, () -> store)
+                .withUserConfiguration(TestConfiguration.class).run(context -> {
+                    assertThatThrownBy(() -> context.getBean(TestService.class).failWith("1", original))
+                            .isSameAs(original);
+                    if (sameFailure) assertThat(original.getSuppressed()).isEmpty();
+                    else assertThat(original.getSuppressed()).containsExactly(cleanup);
+                    verify(store).release(token);
+                });
+    }
+
+    @Test
+    void asynchronousCleanupFailuresPreserveTheOriginalCause() {
+        var cleanup = new IllegalStateException("release unavailable");
+        var store = mock(IdempotencyStore.class);
+        var token = new IdempotencyToken("test-key", "owner");
+        when(store.tryAcquire(anyString(), any())).thenReturn(Optional.of(token));
+        doThrow(cleanup).when(store).release(token);
+        contextRunner.withBean(IdempotencyStore.class, () -> store)
+                .withUserConfiguration(TestConfiguration.class).run(context -> {
+                    assertThatThrownBy(() -> context.getBean(TestService.class).failAsyncOnce("1").join())
+                            .isInstanceOf(CompletionException.class)
+                            .satisfies(failure -> {
+                                assertThat(failure.getCause()).isInstanceOf(IllegalStateException.class)
+                                        .hasMessage("temporary async failure");
+                                assertThat(failure.getCause().getSuppressed()).contains(cleanup);
+                            });
+                });
+    }
 
     @Test
     void shouldRejectDuplicateAndAllowDifferentKey() {
@@ -140,6 +207,21 @@ class IdempotencyAutoConfigurationTest {
         private final AtomicInteger creations = new AtomicInteger();
         private final AtomicInteger attempts = new AtomicInteger();
         private final AtomicInteger asyncAttempts = new AtomicInteger();
+
+        @Idempotent(key = "#p0")
+        public String overloaded(String value) { return "string"; }
+
+        @Idempotent(key = "#p0")
+        public String overloaded(Long value) { return "long"; }
+
+        @Idempotent(key = "#p0", namespace = "shared")
+        public String shared(String value) { return "string"; }
+
+        @Idempotent(key = "#p0", namespace = "shared")
+        public String shared(Long value) { return "long"; }
+
+        @Idempotent(key = "#p0")
+        public void failWith(String key, RuntimeException failure) { throw failure; }
 
         @Idempotent(key = "#p0", namespace = "order:create")
         public int create(String orderNo) {

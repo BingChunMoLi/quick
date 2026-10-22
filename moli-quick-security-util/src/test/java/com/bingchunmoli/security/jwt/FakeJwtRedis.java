@@ -25,10 +25,16 @@ final class FakeJwtRedis {
     Runnable beforeIndexRemoval = () -> { };
     Runnable afterSnapshotRead = () -> { };
     private final Map<String, byte[]> bytes = new ConcurrentHashMap<>();
-    private final RedisSerializer<Object> serializer = new SnapshotSerializer();
+    private final RedisSerializer<Object> serializer;
+
+    FakeJwtRedis(Map<String, Object> values, Map<String, Set<Object>> sets, Map<String, Long> ttls) {
+        this(values, sets, ttls, new SnapshotSerializer());
+    }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    FakeJwtRedis(Map<String, Object> values, Map<String, Set<Object>> sets, Map<String, Long> ttls) {
+    FakeJwtRedis(Map<String, Object> values, Map<String, Set<Object>> sets, Map<String, Long> ttls,
+                 RedisSerializer<Object> serializer) {
+        this.serializer = serializer;
         this.values = values;
         this.sets = sets;
         this.ttls = ttls;

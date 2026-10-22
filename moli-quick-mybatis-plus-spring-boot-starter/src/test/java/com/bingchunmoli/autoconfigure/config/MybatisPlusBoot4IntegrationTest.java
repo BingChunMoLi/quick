@@ -6,6 +6,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.LongValue;
 import com.baomidou.mybatisplus.annotation.DbType;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.session.SqlSessionFactory;
@@ -19,6 +23,35 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class MybatisPlusBoot4IntegrationTest {
+    @Test
+    void hostTenantPluginFiltersRowsAndPaginationCounts() {
+        var tenant = new TenantLineInnerInterceptor(new TenantLineHandler() {
+            @Override
+            public Expression getTenantId() { return new LongValue(7); }
+        });
+        new ApplicationContextRunner().withUserConfiguration(Host.class)
+                .withBean(TenantLineInnerInterceptor.class, () -> tenant)
+                .withPropertyValues("spring.datasource.url=jdbc:h2:mem:quick_tenant", "spring.datasource.username=sa")
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean(MybatisPlusInterceptor.class).getInterceptors())
+                            .contains(tenant).last().isInstanceOf(PaginationInnerInterceptor.class);
+                    var factory = context.getBean(SqlSessionFactory.class);
+                    factory.getConfiguration().addMapper(TenantMapper.class);
+                    try (var connection = context.getBean(javax.sql.DataSource.class).getConnection();
+                         var statement = connection.createStatement()) {
+                        statement.execute("create table starter_tenant_items(id int primary key, tenant_id int)");
+                        statement.execute("insert into starter_tenant_items values (1, 7), (2, 8)");
+                    }
+                    try (var session = factory.openSession()) {
+                        assertThat(session.getMapper(TenantMapper.class).ids()).containsExactly(1);
+                        Page<Integer> page = new Page<>(1, 10);
+                        assertThat(session.getMapper(TenantMapper.class).page(page)).containsExactly(1);
+                        assertThat(page.getTotal()).isEqualTo(1);
+                    }
+                });
+    }
+
     @Test
     void hostPaginationDoesNotRemoveTheOtherQuickPlugins() {
         var pagination = new PaginationInnerInterceptor(DbType.POSTGRE_SQL);
@@ -62,6 +95,14 @@ class MybatisPlusBoot4IntegrationTest {
     public interface PagingMapper {
         @Select("select id from starter_items order by id")
         List<Integer> ids(IPage<Integer> page);
+    }
+
+    public interface TenantMapper {
+        @Select("select id from starter_tenant_items order by id")
+        List<Integer> ids();
+
+        @Select("select id from starter_tenant_items order by id")
+        List<Integer> page(IPage<Integer> page);
     }
 
     @Configuration(proxyBeanMethods = false)

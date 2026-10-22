@@ -24,7 +24,11 @@ public class JwtTokenResolver {
         }
         String prefix = properties.getTokenPrefix();
         if (prefix != null && !prefix.isBlank()) {
-            if (!header.startsWith(prefix)) {
+            boolean matches = "Authorization".equalsIgnoreCase(properties.getHeaderName())
+                    && "Bearer ".equalsIgnoreCase(prefix)
+                    ? header.regionMatches(true, 0, prefix, 0, prefix.length())
+                    : header.startsWith(prefix);
+            if (!matches) {
                 return Optional.empty();
             }
             return Optional.of(header.substring(prefix.length()).trim());

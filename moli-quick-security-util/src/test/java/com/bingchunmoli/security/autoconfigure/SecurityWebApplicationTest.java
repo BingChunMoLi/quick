@@ -4,6 +4,7 @@ import com.bingchunmoli.security.jwt.*;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.server.context.WebServerApplicationContext;
@@ -45,6 +46,17 @@ class SecurityWebApplicationTest {
     void defaultWebApplicationStartsAndAuthenticatesAValidToken() throws Exception {
         JwtToken token = context.getBean(JwtTokenService.class).createToken(user());
         var response = get(token.getToken());
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).isEqualTo("alice");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"bearer", "BEARER", "bEaReR"})
+    void bearerSchemeIsCaseInsensitiveOverHttp(String scheme) throws Exception {
+        var token = context.getBean(JwtTokenService.class).createToken(user());
+        var response = HTTP.send(HttpRequest.newBuilder(URI.create(url + "/whoami"))
+                        .header("Authorization", scheme + " " + token.getToken())
+                        .timeout(Duration.ofSeconds(10)).GET().build(), HttpResponse.BodyHandlers.ofString());
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body()).isEqualTo("alice");
     }

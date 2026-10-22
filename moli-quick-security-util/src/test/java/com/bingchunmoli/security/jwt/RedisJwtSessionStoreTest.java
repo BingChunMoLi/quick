@@ -3,7 +3,11 @@ package com.bingchunmoli.security.jwt;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializer;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -19,6 +23,7 @@ import java.util.concurrent.Executors;
 import java.util.IdentityHashMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -27,6 +32,39 @@ class RedisJwtSessionStoreTest {
     private static final Instant NOW = Instant.parse("2026-10-20T00:00:00.750Z");
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
     private final Map<RedisTemplate<String, Object>, FakeJwtRedis> backends = new IdentityHashMap<>();
+
+    @ParameterizedTest
+    @EnumSource(value = JwtMode.class, names = {"SIMPLE", "MIXIN"})
+    @SuppressWarnings("unchecked")
+    void defaultJdkSerializationSupportsIssueRefreshAndRevoke(JwtMode mode) {
+        var defaultTemplate = new RedisTemplate<String, Object>();
+        defaultTemplate.setConnectionFactory(mock(RedisConnectionFactory.class));
+        defaultTemplate.afterPropertiesSet();
+        assertThat(defaultTemplate.getValueSerializer()).isInstanceOf(JdkSerializationRedisSerializer.class);
+        var backend = new FakeJwtRedis(new ConcurrentHashMap<>(), new ConcurrentHashMap<>(),
+                new ConcurrentHashMap<>(), (RedisSerializer<Object>) defaultTemplate.getValueSerializer());
+        var properties = properties();
+        properties.setSecret("jdk-redis-jwt-regression-test-secret-20261022");
+        properties.setMode(mode);
+        var store = new RedisJwtSessionStore(backend.template, properties);
+        var tokens = new JwtTokenService(properties, store);
+        var user = new JwtUser("user-1", "alice", List.of("ROLE_USER"),
+                Map.of("tenantId", 7, "labels", List.of("one", "two")));
+
+        var first = tokens.createToken(user);
+        var second = tokens.createToken(user);
+        assertThat(tokens.authenticate(first.getToken()).getPrincipal()).usingRecursiveComparison().isEqualTo(user);
+        assertThat(store.findByUserId("user-1")).hasSize(2);
+        assertThat(store.findBySessionId(first.getSessionId())).get().satisfies(session ->
+                assertThat(session.getLastAccessAt()).isAfterOrEqualTo(first.getIssuedAt()));
+
+        tokens.forceLogoutToken(first.getToken());
+        assertThat(store.isTokenBlacklisted(first.getTokenId())).isTrue();
+        assertThatThrownBy(() -> tokens.authenticate(first.getToken())).isInstanceOf(JwtTokenException.class);
+        assertThat(tokens.authenticate(second.getToken()).getPrincipal()).usingRecursiveComparison().isEqualTo(user);
+        tokens.forceLogoutByUserId("user-1");
+        assertThatThrownBy(() -> tokens.authenticate(second.getToken())).isInstanceOf(JwtTokenException.class);
+    }
 
     @Test
     void shouldStoreSessionAndBlacklistTokenWithRedisTemplate() {

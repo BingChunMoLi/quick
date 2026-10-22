@@ -64,7 +64,7 @@ String bearerToken = token.getToken();
 tokens.authenticate(bearerToken);
 ```
 
-客户端默认发送 `Authorization: Bearer <token>`。`SecurityUserContext` 提供 `getAuthentication()`、`getUsername()`、`getPrincipal(Class)`、`hasRole/hasAuthority` 等方法；无登录态时返回 Optional 或 false。
+客户端默认发送 `Authorization: Bearer <token>`。此标准组合也接受 `bearer`、`BEARER` 等认证方案大小写形式，Token 本身保持原样；自定义 Header/前缀仍按配置精确匹配。`SecurityUserContext` 提供 `getAuthentication()`、`getUsername()`、`getPrincipal(Class)`、`hasRole/hasAuthority` 等方法；无登录态时返回 Optional 或 false。
 
 ## JWT 模式与存储
 
@@ -89,6 +89,8 @@ moli:
 ```
 
 需要宿主的 `RedisUtil` 或 `RedisTemplate<String,Object>`；不是 OAuth 模块使用的 `StringRedisTemplate` 存储协议。也可提供 `JwtSessionStore` Bean，或配置其实现类名。
+
+`JwtSession` 和 `JwtUser` 支持 JDK 序列化，可直接使用 Boot 默认 Redis 模板；存储不会修改宿主模板的序列化配置。使用 JDK 序列化时，自定义 `attributes` 的整个对象图（包括集合与嵌套值）也必须可序列化。已有 JSON 模板继续使用原序列化协议与 Redis Key，不需要迁移会话数据。
 
 Redis 存储将会话撤销标记单独保存到 `<redis-key-prefix>:session:<sid>:revoked`，有效期覆盖会话剩余寿命，刷新会话不会删除或覆盖该标记。已有会话数据可继续读取；滚动升级时应完成所有实例升级后再依赖此并发退出保证，因为旧版本不读取撤销标记。
 

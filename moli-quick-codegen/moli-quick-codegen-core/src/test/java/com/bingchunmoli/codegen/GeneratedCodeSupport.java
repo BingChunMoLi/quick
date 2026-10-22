@@ -36,7 +36,7 @@ final class GeneratedCodeSupport {
         StringWriter diagnostic = new StringWriter();
         try (StandardJavaFileManager manager = compiler.getStandardFileManager(null, null, java.nio.charset.StandardCharsets.UTF_8)) {
             List<String> options = new ArrayList<>(List.of("--release", "17", "-encoding", "UTF-8", "-classpath", System.getProperty("surefire.test.class.path", System.getProperty("java.class.path")), "-d", classes.toString()));
-            if (lombok) options.addAll(List.of("-proc:full", "-processor", "lombok.launch.AnnotationProcessorHider$AnnotationProcessor"));
+            if (lombok) options.addAll(List.of("-processor", "lombok.launch.AnnotationProcessorHider$AnnotationProcessor"));
             else options.add("-proc:none");
             boolean success = compiler.getTask(diagnostic, manager, null, options, null, manager.getJavaFileObjectsFromPaths(sources)).call();
             if (!success) throw new AssertionError("Generated code failed compilation:\n" + diagnostic);

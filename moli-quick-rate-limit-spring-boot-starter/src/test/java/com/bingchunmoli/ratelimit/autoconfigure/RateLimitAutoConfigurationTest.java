@@ -29,6 +29,38 @@ class RateLimitAutoConfigurationTest {
                     RateLimitAutoConfiguration.class));
 
     @Test
+    void overloadedMethodsHaveIndependentDefaultBuckets() {
+        contextRunner.withUserConfiguration(TestConfiguration.class).run(context -> {
+            var service = context.getBean(TestService.class);
+            assertThat(service.overloaded("1")).isEqualTo("string");
+            assertThat(service.overloaded(1L)).isEqualTo("long");
+            assertThatThrownBy(() -> service.overloaded("2")).isInstanceOf(RateLimitExceededException.class);
+            assertThatThrownBy(() -> service.overloaded(2L)).isInstanceOf(RateLimitExceededException.class);
+        });
+    }
+
+    @Test
+    void explicitNamespacesStillShareBucketsAcrossOverloads() {
+        contextRunner.withUserConfiguration(TestConfiguration.class).run(context -> {
+            var service = context.getBean(TestService.class);
+            service.shared("1");
+            assertThatThrownBy(() -> service.shared(1L)).isInstanceOf(RateLimitExceededException.class);
+        });
+    }
+
+    @Test
+    void nonOverloadedDefaultBucketKeepsItsExistingKey() {
+        contextRunner.withUserConfiguration(TestConfiguration.class).run(context -> {
+            var service = context.getBean(TestService.class);
+            service.single("1");
+            assertThatThrownBy(() -> service.single("2"))
+                    .isInstanceOfSatisfying(RateLimitExceededException.class, failure ->
+                            assertThat(failure.getKey()).isEqualTo(
+                                    "moli:rate-limit:" + TestService.class.getName() + ".single:global"));
+        });
+    }
+
+    @Test
     void shouldLimitEachResolvedKeyIndependently() {
         contextRunner.withUserConfiguration(TestConfiguration.class).run(context -> {
             TestService service = context.getBean(TestService.class);
@@ -123,6 +155,21 @@ class RateLimitAutoConfigurationTest {
     static class TestService {
 
         private final AtomicInteger requests = new AtomicInteger();
+
+        @RateLimit(permits = 1)
+        public String overloaded(String value) { return "string"; }
+
+        @RateLimit(permits = 1)
+        public String overloaded(Long value) { return "long"; }
+
+        @RateLimit(permits = 1, namespace = "shared")
+        public String shared(String value) { return "string"; }
+
+        @RateLimit(permits = 1, namespace = "shared")
+        public String shared(Long value) { return "long"; }
+
+        @RateLimit(permits = 1)
+        public String single(String value) { return value; }
 
         @RateLimit(
                 key = "#p0",
