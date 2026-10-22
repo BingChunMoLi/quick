@@ -102,6 +102,30 @@ class IdempotencyAutoConfigurationTest {
                 .run(context -> assertThat(context.getBean(IdempotencyStore.class)).isSameAs(custom));
     }
 
+    @Test
+    void rejectsInvalidDefaultsAtStartupButIgnoresDisabledConfiguration() {
+        for (String property : new String[]{"moli.idempotency.default-timeout=0s",
+                "moli.idempotency.default-timeout=-1s", "moli.idempotency.key-prefix="}) {
+            contextRunner.withPropertyValues(property).run(context -> {
+                assertThat(context).hasFailed();
+                assertThat(context.getStartupFailure()).hasRootCauseInstanceOf(IllegalArgumentException.class);
+            });
+            contextRunner.withPropertyValues(property, "moli.idempotency.enabled=false")
+                    .run(context -> assertThat(context).hasNotFailed());
+        }
+    }
+
+    @Test
+    void defaultDigestSupportsJavaTimeArgumentsWithoutAHostJackson2Mapper() {
+        contextRunner.withUserConfiguration(TestConfiguration.class).run(context -> {
+            TestService service = context.getBean(TestService.class);
+            var timestamp = java.time.LocalDateTime.of(2026, 10, 22, 12, 0);
+            assertThat(service.createTimed(timestamp)).isEqualTo(1);
+            assertThatThrownBy(() -> service.createTimed(timestamp)).isInstanceOf(DuplicateRequestException.class);
+            assertThat(service.createTimed(timestamp.plusSeconds(1))).isEqualTo(2);
+        });
+    }
+
     @Configuration(proxyBeanMethods = false)
     static class TestConfiguration {
 
@@ -119,6 +143,11 @@ class IdempotencyAutoConfigurationTest {
 
         @Idempotent(key = "#p0", namespace = "order:create")
         public int create(String orderNo) {
+            return creations.incrementAndGet();
+        }
+
+        @Idempotent
+        public int createTimed(java.time.LocalDateTime timestamp) {
             return creations.incrementAndGet();
         }
 

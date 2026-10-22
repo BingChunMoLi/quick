@@ -10,6 +10,8 @@ import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnSingleCandidate;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration;
 import org.springframework.boot.data.redis.autoconfigure.DataRedisProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -29,13 +31,14 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @EnableConfigurationProperties({DataRedisProperties.class})
 public class RedisSerializerAutoConfiguration {
 
-    @Bean
+    @Bean(name = {"redisTemplate", "createRedisTemplate"})
     @ConditionalOnMissingBean(name = "redisTemplate")
-    public RedisTemplate<String, Object> createRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
+    @ConditionalOnSingleCandidate(RedisConnectionFactory.class)
+    public RedisTemplate<String, Object> createRedisTemplate(RedisConnectionFactory redisConnectionFactory,
+            @Qualifier("redisSerializer") RedisSerializer<Object> redisSerializer) {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
-        RedisSerializer<Object> redisSerializer = getRedisSerializer();
         redisTemplate.setKeySerializer(stringRedisSerializer);
         redisTemplate.setValueSerializer(redisSerializer);
         redisTemplate.setHashKeySerializer(stringRedisSerializer);
@@ -45,7 +48,7 @@ public class RedisSerializerAutoConfiguration {
         return redisTemplate;
     }
 
-    @Bean
+    @Bean(name = {"redisSerializer", "getRedisSerializer"})
     @ConditionalOnMissingBean(
             name = "redisSerializer"
     )

@@ -13,6 +13,8 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 
 import java.util.EnumSet;
 
@@ -72,6 +74,28 @@ class WebAutoConfigurationTest {
                     assertThat(context).doesNotHaveBean(RequestIdGenerator.class);
                     assertThat(context).hasSingleBean(GlobalWebExceptionHandler.class);
                 });
+    }
+
+    @Test
+    void shortMaximumWithTheDefaultGeneratorFailsAtStartup() {
+        contextRunner.withPropertyValues("moli.web.request-id.max-length=16").run(context -> {
+            assertThat(context).hasFailed();
+            assertThat(context.getStartupFailure()).rootCause().hasMessageContaining("at least 32");
+        });
+    }
+
+    @Test
+    void shortMaximumWorksWithACustomGeneratorAndDoesNotValidateWhenDisabled() {
+        contextRunner.withPropertyValues("moli.web.request-id.max-length=16")
+                .withBean(RequestIdGenerator.class, () -> () -> "short-id").run(context -> {
+                    assertThat(context).hasNotFailed();
+                    var registration = context.getBean("moliRequestIdFilterRegistration", FilterRegistrationBean.class);
+                    var response = new MockHttpServletResponse();
+                    registration.getFilter().doFilter(new MockHttpServletRequest("GET", "/"), response, (req, res) -> { });
+                    assertThat(response.getHeader("X-Request-Id")).isEqualTo("short-id");
+                });
+        contextRunner.withPropertyValues("moli.web.request-id.max-length=16", "moli.web.enabled=false")
+                .run(context -> assertThat(context).hasNotFailed());
     }
 
     @Test

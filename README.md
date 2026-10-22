@@ -126,7 +126,7 @@ Quick 是按需组合的 Maven 多模块项目，覆盖数据访问、缓存、W
 
 - 统一 Web 错误、请求 ID：引入 Web Starter；正常成功响应仍由业务决定。
 - 业务方法防重/限流：选择幂等、限流 Starter，多实例配置 Redis；注解方法应通过 Spring 代理调用。
-- 数据访问：MyBatis-Plus 运行时组件与代码生成工具分别接入；默认分页方言为 MySQL，其他数据库显式替换拦截器组合。
+- 数据访问：MyBatis-Plus 运行时组件与代码生成工具分别接入；默认分页方言为 MySQL，其他数据库配置 `moli.mybatis-plus.db-type` 或提供分页 Bean。
 - 第三方登录：OAuth Client Starter + 按需渠道 + 宿主安全链/成功处理器；详细配置见 [QQ/微信/Google 渠道指南](moli-quick-oauth/CHANNELS.md)。Quick Security JWT 不会自动桥接第三方身份。
 - 对象存储：直接添加实际 Provider，单/多 Provider 使用统一 ObjectStorageClient。
 - 代码生成：本机 UI 用 codegen-app，嵌入应用用 codegen Starter，写项目用 CLI/Maven；首选统一生成器，旧模块保持独立 API。
@@ -137,14 +137,16 @@ Quick 是按需组合的 Maven 多模块项目，覆盖数据访问、缓存、W
 | --- | --- | --- |
 | AOP 日志/耗时 | 显式 `@EnableAop` 或单项启用注解 | Spring 代理调用；日志包含参数/返回值 |
 | 幂等、限流、Web | 默认开启 | 自定义 Bean/配置可替换；内存存储仅当前实例 |
-| Security/JWT | 默认开启，默认链在宿主已有链时退让 | 默认 JWT 密钥会告警，生产必须更换；自有链自行挂载 JWT 过滤器 |
-| 请求验签 | `moli.interceptor.sign.sign.enable=true` | RedisUtil、Jackson 2 Mapper、签名协议一致性 |
+| Security/JWT | 默认开启，默认链在宿主已有链时退让 | JWT 启用必须显式配置随机密钥，缺失或旧默认值拒绝启动；自有链自行挂载 JWT 过滤器 |
+| 请求验签 | `moli.interceptor.sign.sign.enable=true` | RedisUtil、签名协议一致性；缺少 Jackson 2 Mapper 时使用模块内部默认值 |
 | 对象存储 Provider | 对应 enabled=true 或单 provider 选择项 | 需要实际 SDK 凭证、bucket 与权限 |
 | 生成器 Web/UI | `moli.codegen.enabled=true` | 宿主访问控制；页面只预览/下载 |
 | OAuth Authorization Server / Resource Server | 对应 `moli.oauth.auth-server.enabled=true` / `resource-server.enabled=true` | 默认关闭；Servlet、宿主认证、标准 Bearer 令牌；不自动桥接旧 JWT |
 | OAuth Client | `moli.oauth.client.enabled=true` | 登录另开 login.enabled，宿主掌握本地登录态 |
 
 各模块完整默认值及限制以其 README 和属性类为准。不要将演示应用、生成器或聚合父 POM 当成业务依赖入口。
+
+Starter 安全默认值及接入调整见 [迁移说明](STARTER-MIGRATION.md)。
 
 ## 本地构建与验证
 

@@ -2,6 +2,7 @@ package com.bingchunmoli.security.autoconfigure;
 
 import com.bingchunmoli.security.jwt.JwtTokenProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.core.Ordered;
 
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ public class SecurityUtilProperties {
 
     private boolean forceLogoutFilterEnabled = true;
 
+    @NestedConfigurationProperty
     private JwtTokenProperties jwt = new JwtTokenProperties();
 
     private int filterOrder = Ordered.LOWEST_PRECEDENCE - 100;

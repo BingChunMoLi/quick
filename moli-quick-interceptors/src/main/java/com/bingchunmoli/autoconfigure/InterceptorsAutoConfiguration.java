@@ -10,8 +10,9 @@ import com.bingchunmoli.util.MD5WithRSASignUtil;
 import com.bingchunmoli.util.SHA256WithRSASignUtil;
 import com.bingchunmoli.util.SignUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -23,7 +24,6 @@ import org.springframework.context.annotation.Import;
  *
  * @author MoLi
  */
-@RequiredArgsConstructor
 @AutoConfiguration
 @Import(InterceptorsAutoConfiguration.SignAutoConfiguration.class)
 @EnableConfigurationProperties(InterceptorsAutoConfigurationProperties.class)
@@ -33,20 +33,22 @@ public class InterceptorsAutoConfiguration {
      * 自动配置签名
      * @author MoLi
      */
-    @RequiredArgsConstructor
-    @Configuration
+    @Configuration(proxyBeanMethods = false)
     @ConditionalOnProperty(prefix = "moli.interceptor.sign.sign", value = "enable", havingValue = "true")
     static class SignAutoConfiguration {
 
         /**
          * 注入signUtil
-         * @param properties 配置properties
-         * @param om json序列化
+         * @param propertie 配置properties
+         * @param mappers 宿主提供的 Jackson 2 Mapper；缺失时使用模块内部 Mapper
          * @param redisUtil redisUtil
          * @return signUtil
          */
         @Bean
-        SignUtil signUtil(InterceptorsAutoConfigurationProperties propertie, ObjectMapper om, RedisUtil redisUtil) {
+        @ConditionalOnMissingBean(SignUtil.class)
+        SignUtil signUtil(InterceptorsAutoConfigurationProperties propertie, ObjectProvider<ObjectMapper> mappers,
+                          RedisUtil redisUtil) {
+            ObjectMapper om = mappers.getIfAvailable(() -> new ObjectMapper().findAndRegisterModules());
             String algorithm = propertie.getSign().getAlgorithm();
             return switch (algorithm) {
                 case "SHA256WithRSA" -> new SHA256WithRSASignUtil(om, propertie.getSign(), redisUtil);
@@ -59,25 +61,25 @@ public class InterceptorsAutoConfiguration {
         /**
          * 注入 signInterceptor
          * @param properties 配置properties
-         * @param om json序列化
-         * @param redisUtil redisUtil
+         * @param signUtil 选定的验签实现
          * @return signInterceptor
          */
         @Bean
-        SignInterceptor signInterceptor(InterceptorsAutoConfigurationProperties properties, ObjectMapper om, RedisUtil redisUtil) {
-            return new SignInterceptor(properties, signUtil(properties, om, redisUtil));
+        @ConditionalOnMissingBean(SignInterceptor.class)
+        SignInterceptor signInterceptor(InterceptorsAutoConfigurationProperties properties, SignUtil signUtil) {
+            return new SignInterceptor(properties, signUtil);
         }
 
         /**
          * 注入interceptorsRegistrar
          * @param properties 配置properties
-         * @param om json序列化
-         * @param redisUtil redisUtil
+         * @param signInterceptor 选定的拦截器
          * @return interceptorsRegistrar
          */
         @Bean
-        InterceptorsRegistrar interceptorsRegistrar(InterceptorsAutoConfigurationProperties properties, ObjectMapper om, RedisUtil redisUtil) {
-            return new InterceptorsRegistrar(properties, signInterceptor(properties, om, redisUtil));
+        @ConditionalOnMissingBean(InterceptorsRegistrar.class)
+        InterceptorsRegistrar interceptorsRegistrar(InterceptorsAutoConfigurationProperties properties, SignInterceptor signInterceptor) {
+            return new InterceptorsRegistrar(properties, signInterceptor);
         }
 
         /**
@@ -85,6 +87,7 @@ public class InterceptorsAutoConfiguration {
          * @return CacheFilter
          */
         @Bean
+        @ConditionalOnMissingBean(CacheFilter.class)
         CacheFilter cacheFilter() {
             return new CacheFilter();
         }

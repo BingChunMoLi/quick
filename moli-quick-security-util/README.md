@@ -34,7 +34,7 @@ moli:
       active-timeout: 30m
 ```
 
-默认 JWT 接入由宿主实现登录凭证认证和 `/login` 接口；白名单不会自动创建登录接口。显式启用表单登录时，Spring Security 提供 `/login` 流程，宿主提供 AuthenticationManager 或用户认证配置。HMAC 密钥至少需要满足算法的 256 bit 长度要求，使用随机强密钥。未替换内置默认密钥时会输出启动 WARN，不打印密钥内容。
+默认 JWT 接入由宿主实现登录凭证认证和 `/login` 接口；白名单不会自动创建登录接口。显式启用表单登录时，Spring Security 提供 `/login` 流程，宿主提供 AuthenticationManager 或用户认证配置。JWT 启用时必须显式提供随机强密钥，UTF-8 编码至少 32 字节；未配置、空白、过短或使用旧公开默认密钥时拒绝启动。直接构造 JwtTokenService 也执行相同检查，错误消息不包含密钥。
 
 默认链要求其他请求认证，默认关闭 CSRF、表单登录和 HTTP Basic；JWT 开启时使用 STATELESS 策略。基于 Cookie/Session 的业务应自行定义安全链及 CSRF 策略。声明自己的安全链后，Quick 不会自动将 JWT 过滤器加入该链，需要宿主显式添加：
 
@@ -117,6 +117,6 @@ JWT 认证通过 `JwtSessionStore.refreshIfValid` 校验并续期当前会话。
 | `jwt.mode / timeout / active-timeout` | `SIMPLE / 2h / 30m` |
 | `jwt.header-name / token-prefix` | `Authorization / "Bearer "` |
 
-表中相对属性均位于 `moli.security` 下。关闭 `jwt.enabled` 时默认链不再依赖 JWT 过滤器；认证仍由宿主提供，可通过开启表单登录、HTTP Basic 或自定义安全链接入。自有链场景需自行决定 JWT/Session 处理。
+表中相对属性均位于 `moli.security` 下。关闭 `jwt.enabled` 时不再自动创建 JWT 属性 Bean、存储工厂、存储、服务、解析器及过滤器，保留原 Redis 存储配置也不会初始化它。默认链不再依赖 JWT 过滤器；认证仍由宿主提供，可通过开启表单登录、HTTP Basic 或自定义安全链接入。自有链场景需自行决定 JWT/Session 处理。
 
 第三方登录使用独立 [OAuth 模块](../moli-quick-oauth/README.md)；本模块不自动把 OAuth 身份桥接为本地 JWT。

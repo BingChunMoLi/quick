@@ -9,6 +9,8 @@ import java.time.Duration;
  */
 public class JwtTokenProperties {
 
+    /** Legacy public value, retained only so existing integrations can identify and reject it. */
+    @Deprecated
     public static final String DEFAULT_SECRET = "moli-quick-security-default-secret-key-change-me";
 
     private boolean enabled = true;
@@ -17,7 +19,7 @@ public class JwtTokenProperties {
 
     private String issuer = "moli-quick";
 
-    private String secret = DEFAULT_SECRET;
+    private String secret;
 
     private Duration timeout = Duration.ofHours(2);
 

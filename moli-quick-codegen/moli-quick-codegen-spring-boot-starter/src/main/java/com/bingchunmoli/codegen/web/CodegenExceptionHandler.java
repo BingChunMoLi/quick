@@ -18,6 +18,10 @@ public class CodegenExceptionHandler {
     }
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> internal(Exception error) {
+        if (error instanceof org.springframework.web.ErrorResponse response) {
+            return ResponseEntity.status(response.getStatusCode()).headers(response.getHeaders())
+                    .body(Map.of("diagnostics", List.of("Invalid code generation request")));
+        }
         return ResponseEntity.internalServerError().body(Map.of("diagnostics", List.of("Generation failed; check configuration and server environment")));
     }
 }

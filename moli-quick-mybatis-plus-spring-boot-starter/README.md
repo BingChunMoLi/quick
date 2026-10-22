@@ -15,7 +15,7 @@
 </dependency>
 ```
 
-宿主还需提供 MyBatis-Plus 启动集成、数据源和数据库驱动；映射接口继续使用原生 `@Mapper`/`@MapperScan`。当前 POM 的 `mybatis-plus-spring-boot3-starter` 与 MySQL 驱动均为 optional，不会作为完整启动依赖传递给宿主。源码整体采用 Boot 4.1 依赖管理，宿主需要核对实际 MyBatis-Plus/Boot 运行时组合。
+本 Starter 传递引入 MyBatis-Plus Boot 4 Starter，宿主只需提供数据源配置和数据库驱动，映射接口继续使用原生 `@Mapper`/`@MapperScan`。MySQL 驱动仍为 optional，其他数据库使用相应驱动；不要额外引入 Boot 3 的 MyBatis-Plus Starter。
 
 ## 默认行为
 
@@ -39,7 +39,16 @@ private LocalDateTime updateTime;
 
 ## 其他数据库与扩展
 
-PostgreSQL 等场景应替换整个拦截器组合：
+PostgreSQL 等场景可直接配置方言，或提供自己的 PaginationInnerInterceptor Bean，默认组合会使用宿主实例：
+
+```yaml
+moli:
+  mybatis-plus:
+    enabled: true
+    db-type: POSTGRE_SQL
+```
+
+需要调整整个插件组合时，可以提供：
 
 ```java
 @Bean
@@ -52,6 +61,6 @@ MybatisPlusInterceptor mybatisPlusInterceptor() {
 }
 ```
 
-上例类型均来自 `com.baomidou.mybatisplus`。提供 `MetaObjectHandler` Bean 可替换默认填充逻辑。不要假定仅替换分页 Bean 就能改变默认组合内部创建的分页实例。
+上例类型均来自 `com.baomidou.mybatisplus`。提供 `MetaObjectHandler` Bean 可替换默认填充逻辑。
 
-本模块无 `moli.*` 开关。代码生成请使用 [统一代码生成器](../moli-quick-codegen/README.md)，运行时插件与生成工具分别接入。
+`moli.mybatis-plus.enabled=false` 关闭 Quick 的分页、插件组合及字段填充 Bean，不关闭原生 MyBatis-Plus 数据源和 Mapper 集成。代码生成请使用 [统一代码生成器](../moli-quick-codegen/README.md)，运行时插件与生成工具分别接入。

@@ -15,7 +15,7 @@ Spring MVC 请求签名校验，配套 JSON 重复读取过滤器及 Redis nonce
 </dependency>
 ```
 
-该模块已依赖 Quick Redis Starter。应用需要 `RedisUtil`，以及 Jackson 2 的 `com.fasterxml.jackson.databind.ObjectMapper` Bean；Boot 4 宿主若仅配置 Jackson 3，需显式提供兼容的 Jackson 2 Mapper。
+该模块已依赖 Quick Redis Starter。应用需要 `RedisUtil`。优先使用宿主的 Jackson 2 `com.fasterxml.jackson.databind.ObjectMapper` Bean；Boot 4 宿主只有 Jackson 3 Mapper 时，模块使用内部兼容 Mapper 并发现已安装的 Jackson 2 模块，不向全局容器添加另一套 Mapper Bean。
 
 只有 `moli.interceptor.sign.sign.enable=true` 才注册验签工具、拦截器及 `CacheFilter`。
 
@@ -98,5 +98,7 @@ nonce 在签名验证成功后通过 Redis 带 TTL 的 SET NX 原子消费；错
 ## 边界与定制
 
 该模块校验请求签名，不代替 HTTPS、用户认证或业务授权。默认拦截范围为全部 MVC 路径，忽略列表应由宿主明确设置。验签开关关闭时不会注册上述签名组件。
+
+宿主可按类型提供 SignUtil、SignInterceptor、InterceptorsRegistrar 或 CacheFilter Bean，默认实现会退让，后续组合通过参数注入使用选定的实例。自定义 SignUtil 后不再创建默认算法实现。
 
 浏览器协议演示位于 [Vue 示例](src/main/vue/quick-interceptors-demo/README.md)。对新协议优先使用默认 SHA256WithRSA；MD5 相关实现仅用于既有协议兼容。

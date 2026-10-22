@@ -8,8 +8,6 @@ import com.bingchunmoli.security.jwt.JwtTokenResolver;
 import com.bingchunmoli.security.jwt.JwtTokenService;
 import com.bingchunmoli.security.logout.SecurityLogoutService;
 import jakarta.servlet.http.HttpSessionEvent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -49,8 +47,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @ConditionalOnProperty(prefix = "moli.security", name = "enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(SecurityUtilProperties.class)
 public class SecurityUtilAutoConfiguration {
-
-    private static final Logger log = LoggerFactory.getLogger(SecurityUtilAutoConfiguration.class);
 
     @Bean
     @ConditionalOnMissingBean
@@ -95,18 +91,21 @@ public class SecurityUtilAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "moli.security.jwt", name = "enabled", havingValue = "true", matchIfMissing = true)
     public JwtTokenProperties jwtTokenProperties(SecurityUtilProperties properties) {
         return properties.getJwt();
     }
 
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "moli.security.jwt", name = "enabled", havingValue = "true", matchIfMissing = true)
     public JwtSessionStoreFactory jwtSessionStoreFactory(ListableBeanFactory beanFactory) {
         return new JwtSessionStoreFactory(beanFactory);
     }
 
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "moli.security.jwt", name = "enabled", havingValue = "true", matchIfMissing = true)
     public JwtSessionStore jwtSessionStore(JwtSessionStoreFactory jwtSessionStoreFactory,
                                            JwtTokenProperties jwtTokenProperties) {
         return jwtSessionStoreFactory.create(jwtTokenProperties);
@@ -117,15 +116,13 @@ public class SecurityUtilAutoConfiguration {
     @ConditionalOnProperty(prefix = "moli.security.jwt", name = "enabled", havingValue = "true",
             matchIfMissing = true)
     public JwtTokenService jwtTokenService(JwtTokenProperties jwtTokenProperties, JwtSessionStore jwtSessionStore) {
-        if (JwtTokenProperties.DEFAULT_SECRET.equals(jwtTokenProperties.getSecret())) {
-            log.warn("Using the default JWT secret. For production environments, replace moli.security.jwt.secret with a strong secret.");
-        }
         return new JwtTokenService(jwtTokenProperties, jwtSessionStore);
     }
 
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnBean(JwtTokenService.class)
+    @ConditionalOnProperty(prefix = "moli.security.jwt", name = "enabled", havingValue = "true", matchIfMissing = true)
     public JwtTokenResolver jwtTokenResolver(JwtTokenProperties jwtTokenProperties) {
         return new JwtTokenResolver(jwtTokenProperties);
     }
@@ -133,6 +130,7 @@ public class SecurityUtilAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnBean(JwtTokenService.class)
+    @ConditionalOnProperty(prefix = "moli.security.jwt", name = "enabled", havingValue = "true", matchIfMissing = true)
     public JwtAuthenticationFilter jwtAuthenticationFilter(JwtTokenResolver jwtTokenResolver,
                                                            JwtTokenService jwtTokenService) {
         return new JwtAuthenticationFilter(jwtTokenResolver, jwtTokenService);
@@ -141,6 +139,7 @@ public class SecurityUtilAutoConfiguration {
     @Bean
     @ConditionalOnBean(JwtAuthenticationFilter.class)
     @ConditionalOnMissingBean(name = "jwtAuthenticationFilterRegistration")
+    @ConditionalOnProperty(prefix = "moli.security.jwt", name = "enabled", havingValue = "true", matchIfMissing = true)
     public FilterRegistrationBean<JwtAuthenticationFilter> jwtAuthenticationFilterRegistration(
             JwtAuthenticationFilter jwtAuthenticationFilter) {
         FilterRegistrationBean<JwtAuthenticationFilter> registration = new FilterRegistrationBean<>(jwtAuthenticationFilter);

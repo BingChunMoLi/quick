@@ -91,6 +91,8 @@ RateLimitStore databaseRateLimitStore() {
 | `moli.rate-limit.key-prefix` | `moli:rate-limit` | 存储 Key 前缀 |
 | `moli.rate-limit.order` | `-2147483598` | AOP 执行顺序 |
 
+启用时在启动阶段检查 default-permits、default-window 为正，key-prefix 非空白；关闭本功能时不校验这些未使用的配置。
+
 当前内置算法是固定窗口。它实现简单、开销低，但窗口边界附近可能出现短时流量突增；需要更平滑的
 限流效果时，可以提供自定义 `RateLimitStore` 实现令牌桶或滑动窗口。
 

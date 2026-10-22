@@ -15,9 +15,9 @@ import org.springframework.web.servlet.config.annotation.*;
 @EnableConfigurationProperties(CodegenProperties.class)
 public class CodegenAutoConfiguration {
     @Bean @ConditionalOnMissingBean public CodeGenerator codeGenerator() { return new CodeGenerator(); }
-    @Bean public CodegenController codegenController(CodeGenerator generator, ListableBeanFactory factory) { return new CodegenController(generator, factory); }
-    @Bean public CodegenExceptionHandler codegenExceptionHandler() { return new CodegenExceptionHandler(); }
-    @Bean public WebMvcConfigurer codegenResources() {
+    @Bean @ConditionalOnMissingBean public CodegenController codegenController(CodeGenerator generator, ListableBeanFactory factory) { return new CodegenController(generator, factory); }
+    @Bean @ConditionalOnMissingBean public CodegenExceptionHandler codegenExceptionHandler() { return new CodegenExceptionHandler(); }
+    @Bean @ConditionalOnMissingBean(name = "codegenResources") public WebMvcConfigurer codegenResources() {
         return new WebMvcConfigurer() {
             @Override public void addResourceHandlers(ResourceHandlerRegistry registry) {
                 registry.addResourceHandler("/moli-codegen/**").addResourceLocations("classpath:/codegen-ui/");

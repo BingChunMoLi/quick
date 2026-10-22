@@ -72,6 +72,8 @@ throw new ApiException(
 安全格式的客户端请求 ID 会被透传；包含空白、控制字符、超长等不安全值会被替换。
 声明自定义 `RequestIdGenerator` Bean 可替换默认的无连字符 UUID。
 
+默认生成器产生 32 位 ID，`max-length` 小于 32 时会在启动阶段报错；需要更短 ID 时同时提供符合长度及安全字符约束的自定义生成器。
+
 过滤器覆盖 Servlet REQUEST 和 ASYNC 分派，异步重新分派复用首次验证或生成的 ID。每次分派进入时绑定 MDC，退出时恢复该线程原有上下文，成功响应和异步异常响应均适用。独立后台任务或 Callable 业务工作线程的 MDC 传播由宿主执行器的任务装饰器等机制管理。
 
 Logback 示例：

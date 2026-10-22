@@ -38,7 +38,8 @@ public class IdempotencyAutoConfiguration {
     @ConditionalOnMissingBean
     public IdempotencyKeyResolver idempotencyKeyResolver(ObjectProvider<ObjectMapper> objectMapper,
                                                           IdempotencyProperties properties) {
-        return new DefaultIdempotencyKeyResolver(objectMapper.getIfAvailable(ObjectMapper::new), properties);
+        return new DefaultIdempotencyKeyResolver(
+                objectMapper.getIfAvailable(() -> new ObjectMapper().findAndRegisterModules()), properties);
     }
 
     @Bean

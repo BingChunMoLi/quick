@@ -5,6 +5,8 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
+ * Configuration for explicit invocations of the legacy generator.
+ *
  * @author moli
  */
 @Data

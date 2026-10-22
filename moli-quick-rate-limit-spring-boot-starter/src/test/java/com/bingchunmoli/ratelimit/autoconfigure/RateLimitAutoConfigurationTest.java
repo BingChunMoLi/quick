@@ -98,6 +98,19 @@ class RateLimitAutoConfigurationTest {
                 });
     }
 
+    @Test
+    void validatesDefaultsAtStartupAndDoesNotValidateDisabledConfiguration() {
+        for (String property : new String[]{"moli.rate-limit.default-permits=0", "moli.rate-limit.default-window=0s",
+                "moli.rate-limit.default-window=-1s", "moli.rate-limit.key-prefix="}) {
+            contextRunner.withPropertyValues(property).run(context -> {
+                assertThat(context).hasFailed();
+                assertThat(context.getStartupFailure()).hasRootCauseInstanceOf(IllegalArgumentException.class);
+            });
+            contextRunner.withPropertyValues(property, "moli.rate-limit.enabled=false")
+                    .run(context -> assertThat(context).hasNotFailed());
+        }
+    }
+
     @Configuration(proxyBeanMethods = false)
     static class TestConfiguration {
 

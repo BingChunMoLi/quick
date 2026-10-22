@@ -38,7 +38,13 @@ public class JwtTokenService {
     public JwtTokenService(JwtTokenProperties properties, JwtSessionStore sessionStore) {
         this.properties = properties;
         this.sessionStore = sessionStore;
-        this.secretKey = Keys.hmacShaKeyFor(properties.getSecret().getBytes(StandardCharsets.UTF_8));
+        String secret = properties.getSecret();
+        if (secret == null || secret.isBlank() || JwtTokenProperties.DEFAULT_SECRET.equals(secret)
+                || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalArgumentException(
+                    "Configure moli.security.jwt.secret with a random secret of at least 32 UTF-8 bytes; the legacy default is not allowed");
+        }
+        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     public JwtToken createToken(JwtUser user) {

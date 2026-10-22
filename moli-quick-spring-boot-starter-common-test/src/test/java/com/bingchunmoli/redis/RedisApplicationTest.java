@@ -20,16 +20,16 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@SpringBootTest(classes = TestApplication.class)
+@SpringBootTest(classes = TestApplication.class, properties = "spring.data.redis.repositories.enabled=false")
 public class RedisApplicationTest {
-    @MockitoBean
-    private RedisTemplate<String, Object> redisTemplate;
+    @MockitoBean(name = "redisTemplate")
+    private RedisTemplate<Object, Object> redisTemplate;
     @Autowired
     RedisUtil redisUtil;
 
     @Test
     void contextLoads() {
-        ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
+        ValueOperations<Object, Object> valueOperations = mock(ValueOperations.class);
         ResultVO<String> result = ResultVO.ok("new Data");
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         when(valueOperations.get("test:object")).thenReturn(result);

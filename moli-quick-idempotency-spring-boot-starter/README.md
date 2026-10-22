@@ -36,6 +36,8 @@ public Order createOrder(CreateOrderRequest request) {
 参数别名 `#p0`、`#a0` 始终可用；编译时保留参数名后也可以使用 `#request`。
 不配置 `key` 时，将使用方法签名和参数 JSON 的 SHA-256 摘要。
 
+摘要优先使用宿主 Jackson 2 Mapper；缺失时使用内部 Mapper，并注册已安装的 Jackson 2 模块（含 JavaTime）。Boot 4 的 Jackson 3 自定义序列化设置不会自动应用于这套兼容 Mapper。需要精确定义幂等维度时使用显式业务 key，或提供自定义 KeyResolver。
+
 ## 存储配置
 
 ### 内存模式
@@ -84,6 +86,8 @@ IdempotencyStore databaseIdempotencyStore() {
 | `moli.idempotency.default-timeout` | `10m` | 注解未指定时的 Key 有效期 |
 | `moli.idempotency.key-prefix` | `moli:idempotency` | 存储 Key 前缀 |
 | `moli.idempotency.order` | `-2147483548` | AOP 执行顺序 |
+
+启用时在启动阶段检查 default-timeout 为正、key-prefix 非空白；关闭本功能时不校验这些未使用的配置。
 
 目前直接支持同步返回值和 `CompletionStage`。Reactor `Mono`/`Flux` 等惰性流需要独立的
 订阅生命周期适配，不应直接套用同步切面。

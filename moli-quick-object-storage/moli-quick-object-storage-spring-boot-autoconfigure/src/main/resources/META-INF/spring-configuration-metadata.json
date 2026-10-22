@@ -1,0 +1,15 @@
+{
+  "properties": [
+    {
+      "name": "moli.object-storage.provider",
+      "type": "java.lang.String",
+      "description": "Default provider to enable. Individual provider enabled properties can enable multiple providers."
+    }
+  ],
+  "hints": [
+    {
+      "name": "moli.object-storage.provider",
+      "values": [{"value": "oss"}, {"value": "obs"}, {"value": "cos"}, {"value": "s3"}]
+    }
+  ]
+}

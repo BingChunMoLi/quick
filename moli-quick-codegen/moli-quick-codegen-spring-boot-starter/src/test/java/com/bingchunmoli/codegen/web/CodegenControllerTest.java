@@ -73,4 +73,14 @@ class CodegenControllerTest {
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(generator);
     }
+
+    @Test void unsupportedRequestMediaTypeKeepsItsStatusAndProtocolHeaders() throws Exception {
+        for (String endpoint : List.of("preview", "config/export")) {
+            mvc.perform(post("/moli-codegen/api/" + endpoint).contentType(MediaType.TEXT_PLAIN).content("{}"))
+                    .andExpect(status().isUnsupportedMediaType())
+                    .andExpect(header().string("Accept", org.hamcrest.Matchers.containsString("application/json")))
+                    .andExpect(jsonPath("$.diagnostics[0]").value("Invalid code generation request"));
+        }
+        verifyNoInteractions(generator);
+    }
 }

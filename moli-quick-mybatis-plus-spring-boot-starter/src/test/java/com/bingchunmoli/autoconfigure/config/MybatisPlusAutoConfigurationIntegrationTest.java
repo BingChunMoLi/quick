@@ -50,4 +50,21 @@ class MybatisPlusAutoConfigurationIntegrationTest {
                     assertThat(context.getBean(MetaObjectHandler.class)).isSameAs(metaObjectHandler);
                 });
     }
+
+    @Test
+    void usesHostPaginationInsideTheDefaultCombination() {
+        var pagination = new PaginationInnerInterceptor(DbType.POSTGRE_SQL);
+        contextRunner.withBean(PaginationInnerInterceptor.class, () -> pagination).run(context ->
+                assertThat(context.getBean(MybatisPlusInterceptor.class).getInterceptors()).contains(pagination));
+    }
+
+    @Test
+    void configuresDialectAndCanDisableQuickPlugins() {
+        contextRunner.withPropertyValues("moli.mybatis-plus.db-type=POSTGRE_SQL").run(context ->
+                assertThat(context.getBean(PaginationInnerInterceptor.class).getDbType()).isEqualTo(DbType.POSTGRE_SQL));
+        contextRunner.withPropertyValues("moli.mybatis-plus.enabled=false").run(context -> {
+            assertThat(context).doesNotHaveBean(MybatisPlusInterceptor.class);
+            assertThat(context).doesNotHaveBean(MetaObjectHandler.class);
+        });
+    }
 }

@@ -1,0 +1,40 @@
+name: Starter Regression Checks
+on:
+  push:
+    paths: ['**/pom.xml', '**/src/**', '.github/workflows/starter-verify.yml']
+  pull_request:
+    paths: ['**/pom.xml', '**/src/**', '.github/workflows/starter-verify.yml']
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Verify all modules and starter integration tests
+        run: mvn -B -ntp -Dgpg.skip=true -Dmaven.javadoc.skip=true verify
+  frontend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        directory:
+          - moli-quick-codegen/moli-quick-codegen-spring-boot-starter/src/main/frontend
+          - moli-quick-interceptors/src/main/vue/quick-interceptors-demo
+    defaults:
+      run:
+        working-directory: ${{ matrix.directory }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ${{ matrix.directory }}/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build

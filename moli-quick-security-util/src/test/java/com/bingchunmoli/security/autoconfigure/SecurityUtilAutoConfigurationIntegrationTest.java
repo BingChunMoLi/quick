@@ -14,6 +14,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import com.bingchunmoli.security.jwt.InMemoryJwtSessionStore;
 import com.bingchunmoli.security.jwt.JwtAuthenticationFilter;
 import com.bingchunmoli.security.jwt.JwtSessionStore;
+import com.bingchunmoli.security.jwt.JwtTokenService;
+import com.bingchunmoli.security.jwt.JwtTokenResolver;
+import com.bingchunmoli.security.jwt.JwtTokenProperties;
 import org.springframework.test.util.ReflectionTestUtils;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
@@ -32,9 +35,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SecurityUtilAutoConfigurationIntegrationTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+            .withPropertyValues("moli.security.jwt.secret=security-context-test-secret-key-123456789")
             .withConfiguration(AutoConfigurations.of(SecurityUtilAutoConfiguration.class));
 
     private final WebApplicationContextRunner webContextRunner = new WebApplicationContextRunner()
+            .withPropertyValues("moli.security.jwt.secret=security-context-test-secret-key-123456789")
             .withConfiguration(AutoConfigurations.of(SecurityUtilAutoConfiguration.class))
             .withUserConfiguration(WebSecurityConfiguration.class);
 
@@ -72,10 +77,25 @@ class SecurityUtilAutoConfigurationIntegrationTest {
 
     @Test
     void shouldStartDefaultChainWithJwtDisabled() {
-        webContextRunner.withPropertyValues("moli.security.jwt.enabled=false")
+        webContextRunner.withPropertyValues("moli.security.jwt.enabled=false",
+                        "moli.security.jwt.session-store-class-name=com.bingchunmoli.security.jwt.RedisJwtSessionStore")
                 .run(context -> assertThat(context)
                         .hasSingleBean(SecurityFilterChain.class)
-                        .doesNotHaveBean(JwtAuthenticationFilter.class));
+                        .doesNotHaveBean(JwtAuthenticationFilter.class)
+                        .doesNotHaveBean(JwtSessionStoreFactory.class)
+                        .doesNotHaveBean(JwtSessionStore.class)
+                        .doesNotHaveBean(JwtTokenProperties.class));
+    }
+
+    @Test
+    void disablingJwtDoesNotAutoWireAHostTokenServiceIntoFilters() {
+        contextRunner.withPropertyValues("moli.security.jwt.enabled=false")
+                .withBean(JwtTokenService.class, () -> org.mockito.Mockito.mock(JwtTokenService.class))
+                .run(context -> assertThat(context)
+                        .hasSingleBean(JwtTokenService.class)
+                        .doesNotHaveBean(JwtAuthenticationFilter.class)
+                        .doesNotHaveBean(JwtTokenResolver.class)
+                        .doesNotHaveBean(JwtSessionStore.class));
     }
 
     @Test

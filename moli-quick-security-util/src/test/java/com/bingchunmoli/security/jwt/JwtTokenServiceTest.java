@@ -125,6 +125,27 @@ class JwtTokenServiceTest {
         assertThat(tokenService(JwtMode.STATELESS, sessionStore).authenticate(token).isAuthenticated()).isTrue();
     }
 
+    @Test
+    void cannotConstructAServiceWithMissingOrPublicSigningKeys() {
+        for (String secret : java.util.Arrays.asList(null, "", "short", JwtTokenProperties.DEFAULT_SECRET)) {
+            JwtTokenProperties properties = new JwtTokenProperties();
+            properties.setSecret(secret);
+            assertThatThrownBy(() -> new JwtTokenService(properties, sessionStore))
+                    .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("moli.security.jwt.secret");
+        }
+    }
+
+    @Test
+    void forgedPublicDefaultKeyTokenCannotAuthenticate() throws Exception {
+        Map<String, Object> claims = JwtClaimsFixtures.claims();
+        claims.put("mode", "STATELESS");
+        claims.remove("sid");
+        claims.put("authorities", List.of("ROLE_ADMIN"));
+        String forged = JwtClaimsFixtures.sign(claims, JwtTokenProperties.DEFAULT_SECRET);
+        assertThatThrownBy(() -> tokenService(JwtMode.SIMPLE, sessionStore).authenticate(forged))
+                .isInstanceOf(JwtTokenException.class);
+    }
+
     private JwtTokenService tokenService(JwtMode mode, JwtSessionStore sessionStore) {
         JwtTokenProperties properties = new JwtTokenProperties();
         properties.setMode(mode);

@@ -16,14 +16,14 @@ class MybatisPlusConfigAutoConfigurationTest {
 
     @Test
     void getPaginationInnerInterceptorShouldUseMysql() {
-        PaginationInnerInterceptor interceptor = configuration.getPaginationInnerInterceptor();
+        PaginationInnerInterceptor interceptor = configuration.getPaginationInnerInterceptor(new MybatisPlusProperties());
 
         assertThat(interceptor.getDbType()).isEqualTo(DbType.MYSQL);
     }
 
     @Test
     void mybatisPlusInterceptorShouldContainExpectedInnerInterceptors() {
-        MybatisPlusInterceptor interceptor = configuration.mybatisPlusInterceptor();
+        MybatisPlusInterceptor interceptor = configuration.mybatisPlusInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
 
         assertThat(interceptor.getInterceptors())
                 .hasSize(3)

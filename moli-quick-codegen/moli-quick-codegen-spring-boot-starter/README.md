@@ -40,6 +40,8 @@ moli:
 
 具名数据源使用 `datasource.beanName`，优先于 JDBC 凭证；只有 Web 入口支持宿主 Bean。UI 导出默认移除明文密码，并将编辑模板内联到 YAML，以便 CLI/Maven 复现。
 
+宿主可按类型替换 CodeGenerator、CodegenController 和 CodegenExceptionHandler；UI 资源配置可通过名为 `codegenResources` 的 WebMvcConfigurer 替换。默认控制器会退让，避免重复路由。不支持的媒体类型等 Spring MVC 错误保留其 HTTP 状态及协议头，内部异常继续返回脱敏的 500。
+
 ## 开发和限制
 
 前端开发指南位于 [src/main/frontend/README.md](src/main/frontend/README.md)，Maven 默认下载固定 Node/npm、执行 npm ci 和构建。干净发布构建需要前端产物；只验证后端可临时使用 `-Dcodegen.ui.skip=true`。

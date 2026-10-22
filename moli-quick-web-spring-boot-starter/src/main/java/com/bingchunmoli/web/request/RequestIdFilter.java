@@ -94,5 +94,9 @@ public class RequestIdFilter extends OncePerRequestFilter {
         if (properties.getMaxLength() <= 0) {
             throw new IllegalArgumentException("moli.web.request-id.max-length must be positive");
         }
+        if (generator.getClass() == UuidRequestIdGenerator.class && properties.getMaxLength() < 32) {
+            throw new IllegalArgumentException(
+                    "moli.web.request-id.max-length must be at least 32 for the default UUID generator; configure a shorter RequestIdGenerator otherwise");
+        }
     }
 }

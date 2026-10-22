@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 
 /**
@@ -15,11 +16,11 @@ import org.springframework.data.redis.core.RedisTemplate;
  */
 @AutoConfiguration(after = RedisSerializerAutoConfiguration.class)
 @ConditionalOnClass(RedisTemplate.class)
-@ConditionalOnBean(RedisTemplate.class)
+@ConditionalOnBean(name = "redisTemplate")
 public class RedisUtilAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(RedisUtil.class)
-    public RedisUtil redisUtil(RedisTemplate<String, Object> redisTemplate) {
+    public RedisUtil redisUtil(@Qualifier("redisTemplate") RedisTemplate<?, ?> redisTemplate) {
         return new RedisUtil(redisTemplate);
     }
 }

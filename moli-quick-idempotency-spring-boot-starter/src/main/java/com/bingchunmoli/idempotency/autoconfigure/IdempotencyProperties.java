@@ -2,6 +2,7 @@ package com.bingchunmoli.idempotency.autoconfigure;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.core.Ordered;
+import org.springframework.beans.factory.InitializingBean;
 
 import java.time.Duration;
 
@@ -9,13 +10,24 @@ import java.time.Duration;
  * Configuration properties for method idempotency.
  */
 @ConfigurationProperties(prefix = "moli.idempotency")
-public class IdempotencyProperties {
+public class IdempotencyProperties implements InitializingBean {
 
     private boolean enabled = true;
     private Store store = Store.MEMORY;
     private Duration defaultTimeout = Duration.ofMinutes(10);
     private String keyPrefix = "moli:idempotency";
     private int order = Ordered.HIGHEST_PRECEDENCE + 100;
+
+    @Override
+    public void afterPropertiesSet() {
+        if (!enabled) return;
+        if (defaultTimeout == null || defaultTimeout.isNegative() || defaultTimeout.isZero()) {
+            throw new IllegalArgumentException("moli.idempotency.default-timeout must be positive");
+        }
+        if (keyPrefix == null || keyPrefix.isBlank()) {
+            throw new IllegalArgumentException("moli.idempotency.key-prefix must not be blank");
+        }
+    }
 
     public boolean isEnabled() {
         return enabled;
