@@ -7,6 +7,8 @@ import com.nimbusds.jose.proc.*;
 import com.nimbusds.jwt.JWTClaimsSet;
 import java.security.Key;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import org.springframework.security.oauth2.client.oidc.authentication.*;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.core.*;
@@ -19,7 +21,7 @@ final class MicrosoftIdTokenDecoder {
     private MicrosoftIdTokenDecoder() { }
     static JwtDecoder create(ClientRegistration registration, MicrosoftOAuth2Properties options, RestClient http) {
         var policy = new Issuers(registration, options);
-        var keys = new Keys(registration.getProviderDetails().getJwkSetUri(), policy, http);
+        var keys = new Keys(registration.getProviderDetails().getJwkSetUri(), policy, http, options.getJwkRefreshWaitTimeout().toNanos());
         var decoder = NimbusJwtDecoder.withJwkSetUri(registration.getProviderDetails().getJwkSetUri())
                 .jwtProcessorCustomizer(processor -> processor.setJWTClaimsSetAwareJWSKeySelector(keys::select)).build();
         decoder.setClaimSetConverter(OidcIdTokenDecoderFactory.createDefaultClaimTypeConverter());
@@ -54,8 +56,12 @@ final class MicrosoftIdTokenDecoder {
         private final Issuers policy;
         private final RestClient http;
         private final JsonMapper json = JsonMapper.builder().build();
+        private final ReentrantLock refreshLock = new ReentrantLock();
+        private final long refreshWaitNanos;
         private volatile Snapshot snapshot;
-        Keys(String uri, Issuers policy, RestClient http) { this.uri = uri; this.policy = policy; this.http = http; }
+        Keys(String uri, Issuers policy, RestClient http, long refreshWaitNanos) {
+            this.uri = uri; this.policy = policy; this.http = http; this.refreshWaitNanos = refreshWaitNanos;
+        }
         List<? extends Key> select(JWSHeader header, JWTClaimsSet claims, SecurityContext context) throws KeySourceException {
             try {
                 if (!JWSAlgorithm.RS256.equals(header.getAlgorithm()) || header.getKeyID() == null) throw new IllegalArgumentException();
@@ -71,23 +77,30 @@ final class MicrosoftIdTokenDecoder {
                         .map(IssuedKey::key).toList();
                 return new JWSVerificationKeySelector<SecurityContext>(JWSAlgorithm.RS256,
                         new ImmutableJWKSet<>(new JWKSet(eligible))).selectJWSKeys(header, context);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw new KeySourceException("Microsoft signing key refresh interrupted");
             } catch (Exception failure) { throw new KeySourceException("Microsoft signing keys unavailable or invalid"); }
         }
         @SuppressWarnings("unchecked")
-        private synchronized Snapshot refresh(Snapshot previous) throws java.text.ParseException {
-            if (snapshot != previous) return snapshot;
-            String body = http.get().uri(uri).retrieve().body(String.class);
-            if (body == null || body.length() > 1_000_000) throw new IllegalArgumentException();
-            Map<String, Object> document = json.readValue(body, Map.class);
-            if (!(document.get("keys") instanceof List<?> entries) || entries.size() > 100) throw new IllegalArgumentException();
-            List<IssuedKey> result = new ArrayList<>();
-            for (Object entry : entries) {
-                if (!(entry instanceof Map<?, ?> raw) || !(raw.get("issuer") instanceof String issuer)) throw new IllegalArgumentException();
-                JWK key = JWK.parse((Map<String, Object>) raw);
-                if (key.isPrivate()) throw new IllegalArgumentException();
-                result.add(new IssuedKey(key, issuer));
-            }
-            return snapshot = new Snapshot(List.copyOf(result), System.nanoTime());
+        private Snapshot refresh(Snapshot previous) throws java.text.ParseException, InterruptedException, KeySourceException {
+            if (!refreshLock.tryLock(refreshWaitNanos, TimeUnit.NANOSECONDS))
+                throw new KeySourceException("Microsoft signing key refresh wait timed out");
+            try {
+                if (snapshot != previous) return snapshot;
+                String body = http.get().uri(uri).retrieve().body(String.class);
+                if (body == null || body.length() > 1_000_000) throw new IllegalArgumentException();
+                Map<String, Object> document = json.readValue(body, Map.class);
+                if (!(document.get("keys") instanceof List<?> entries) || entries.size() > 100) throw new IllegalArgumentException();
+                List<IssuedKey> result = new ArrayList<>();
+                for (Object entry : entries) {
+                    if (!(entry instanceof Map<?, ?> raw) || !(raw.get("issuer") instanceof String issuer)) throw new IllegalArgumentException();
+                    JWK key = JWK.parse((Map<String, Object>) raw);
+                    if (key.isPrivate()) throw new IllegalArgumentException();
+                    result.add(new IssuedKey(key, issuer));
+                }
+                return snapshot = new Snapshot(List.copyOf(result), System.nanoTime());
+            } finally { refreshLock.unlock(); }
         }
     }
 }

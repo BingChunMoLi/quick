@@ -27,8 +27,9 @@ public final class AppleOAuth2ProviderAdapter implements OAuth2ProviderAdapter {
                 .addCustomConverter(new FormHttpMessageConverter()).addCustomConverter(new OAuth2AccessTokenResponseHttpMessageConverter()))
                 .defaultStatusHandler(new OAuth2ErrorResponseErrorHandler()).build();
         code.setRestClient(token); refresh.setRestClient(token);
-        code.addParametersConverter(request -> parameters(request.getClientRegistration()));
-        refresh.addParametersConverter(request -> parameters(request.getClientRegistration()));
+        // Replace the registration secret while preserving Spring's standard grant parameters.
+        code.setParametersConverter(request -> parameters(request.getClientRegistration()));
+        refresh.setParametersConverter(request -> parameters(request.getClientRegistration()));
     }
     private LinkedMultiValueMap<String, String> parameters(ClientRegistration registration) {
         var values = new LinkedMultiValueMap<String, String>();

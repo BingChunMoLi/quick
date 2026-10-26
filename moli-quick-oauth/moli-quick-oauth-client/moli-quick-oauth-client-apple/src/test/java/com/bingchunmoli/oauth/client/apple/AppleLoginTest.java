@@ -62,7 +62,9 @@ class AppleLoginTest {
                 Map<String, String> parameters = new HashMap<>();
                 for (String part : encoded.split("&")) {
                     String[] pair = part.split("=", 2);
-                    parameters.put(URLDecoder.decode(pair[0], StandardCharsets.UTF_8), URLDecoder.decode(pair.length > 1 ? pair[1] : "", StandardCharsets.UTF_8));
+                    String name = URLDecoder.decode(pair[0], StandardCharsets.UTF_8);
+                    assertThat(parameters).as("Token request parameter %s must occur only once", name).doesNotContainKey(name);
+                    parameters.put(name, URLDecoder.decode(pair.length > 1 ? pair[1] : "", StandardCharsets.UTF_8));
                 }
                 assertThat(exchange.getRequestHeaders().getFirst("Authorization")).isNull();
                 var secret = SignedJWT.parse(parameters.get("client_secret"));

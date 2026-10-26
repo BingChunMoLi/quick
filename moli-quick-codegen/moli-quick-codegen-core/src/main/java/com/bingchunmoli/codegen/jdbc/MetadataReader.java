@@ -17,19 +17,20 @@ public class MetadataReader {
             if ("postgresql".equals(dialect.id()) && (schema == null || schema.isBlank())) throw new CodegenException("PostgreSQL schema is required when the connection has no current schema");
             List<TableMetadata> result = new ArrayList<>();
             Set<String> names = new HashSet<>(selected);
+            Set<String> found = new HashSet<>();
             try (ResultSet tables = meta.getTables(catalog, pattern(meta, schema), "%", new String[]{"TABLE"})) {
                 while (tables.next()) {
                     String name = tables.getString("TABLE_NAME");
                     if (!names.isEmpty() && !names.contains(name)) continue;
                     String tableCatalog = tables.getString("TABLE_CAT");
                     String tableSchema = tables.getString("TABLE_SCHEM");
-                    if (result.stream().anyMatch(table -> table.name().equals(name))) throw new CodegenException("Ambiguous table name across catalog/schema: " + name);
+                    if (!found.add(name)) throw new CodegenException("Ambiguous table name across catalog/schema: " + name);
                     List<ColumnMetadata> columns = names.isEmpty() ? List.of() : columns(meta, tableCatalog, tableSchema, name);
                     result.add(new TableMetadata(tableCatalog, tableSchema, name, tables.getString("REMARKS"), columns));
                 }
             }
             for (String name : names)
-                if (result.stream().noneMatch(t -> t.name().equals(name))) throw new CodegenException("Table not found in selected catalog/schema: " + name);
+                if (!found.contains(name)) throw new CodegenException("Table not found in selected catalog/schema: " + name);
             result.sort(Comparator.comparing(TableMetadata::name));
             return new Snapshot(dialect, List.copyOf(result));
         } catch (SQLException e) {

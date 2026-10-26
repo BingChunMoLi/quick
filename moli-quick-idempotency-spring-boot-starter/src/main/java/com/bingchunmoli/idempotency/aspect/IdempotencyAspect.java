@@ -108,7 +108,8 @@ public class IdempotencyAspect extends AbstractPointcutAdvisor implements Method
         try {
             Object result = invocation.proceed();
             if (idempotent.releaseOnFailure() && result instanceof CompletionStage<?> stage) {
-                return stage.whenComplete((ignored, failure) -> {
+                // Observe completion without replacing a concrete Future type or breaking cancellation.
+                stage.whenComplete((ignored, failure) -> {
                     if (failure != null) {
                         releaseAfterFailure(token, failure);
                     }

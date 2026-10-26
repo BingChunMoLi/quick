@@ -35,7 +35,9 @@ public class RedisIdempotencyStore implements IdempotencyStore {
             throw new IllegalArgumentException("timeout must be positive");
         }
         IdempotencyToken token = new IdempotencyToken(key, UUID.randomUUID().toString());
-        Boolean acquired = redisTemplate.opsForValue().setIfAbsent(key, token.value(), timeout);
+        // Redis expires keys with millisecond precision; a positive sub-millisecond TTL becomes PX 0.
+        Duration redisTimeout = timeout.compareTo(Duration.ofMillis(1)) < 0 ? Duration.ofMillis(1) : timeout;
+        Boolean acquired = redisTemplate.opsForValue().setIfAbsent(key, token.value(), redisTimeout);
         return Boolean.TRUE.equals(acquired) ? Optional.of(token) : Optional.empty();
     }
 

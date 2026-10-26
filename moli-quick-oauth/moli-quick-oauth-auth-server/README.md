@@ -51,6 +51,8 @@ spring:
 
 audiences 按真正的 client-id 配置，不是 YAML 中的注册别名。缺少已配置客户端的 audience 时启动失败。JWT 与 opaque access token 均携带 audience。额外用户资料/角色通过原生 `OAuth2TokenCustomizer<JwtEncodingContext>` 或 `OAuth2TokenCustomizer<OAuth2TokenClaimsContext>` Bean 显式提供，默认不复制全部用户属性。
 
+OIDC UserInfo 同时支持 JWT 与 opaque access token，每次请求通过本机 OAuth2AuthorizationService 验证令牌及有效状态，再由原生 OIDC provider 校验 openid scope 和关联的 ID Token。授权存储中的过期、撤销或删除会立即影响下一次 UserInfo 请求，无需远程 introspection；自定义 UserInfo 端点及应用 context-path 同样适用。
+
 ## 密钥与轮换
 
 支持外部 JWK Set、PKCS12 或宿主 `JWKSource<SecurityContext>` Bean。配置加载器要求 RSA 至少 2048 bit、非空且唯一的 kid，并且只选择一个活动私钥。JWKS 仅发布公钥。JWK 文件可包含当前私钥及旧公钥；切换活动 kid 后重启实例，旧公钥保留到存量令牌到期。多实例必须加载一致的持久密钥。

@@ -9,6 +9,35 @@ import static org.mockito.Mockito.*;
 import static org.assertj.core.api.Assertions.*;
 
 class MetadataReaderTest {
+    @Test void duplicateTableNamesStillFailAndCloseTheConnection() throws Exception {
+        var connection = tableConnection("orders", "orders");
+        assertThatThrownBy(() -> new MetadataReader().read(() -> connection,
+                new GenerationConfig.Database(), List.of()))
+                .isInstanceOf(CodegenException.class).hasMessageContaining("Ambiguous table name");
+        verify(connection).close();
+    }
+
+    @Test void missingSelectedTablesStillFailAndCloseTheConnection() throws Exception {
+        var connection = tableConnection("orders");
+        assertThatThrownBy(() -> new MetadataReader().read(() -> connection,
+                new GenerationConfig.Database(), List.of("missing")))
+                .isInstanceOf(CodegenException.class).hasMessageContaining("Table not found");
+        verify(connection).close();
+    }
+
+    private Connection tableConnection(String... names) throws Exception {
+        var connection = mock(Connection.class);
+        var metadata = mock(DatabaseMetaData.class);
+        var tables = mock(ResultSet.class);
+        when(connection.getMetaData()).thenReturn(metadata);
+        when(metadata.getDatabaseProductName()).thenReturn("MySQL");
+        when(metadata.getTables(any(), any(), any(), any())).thenReturn(tables);
+        var index = new java.util.concurrent.atomic.AtomicInteger(-1);
+        when(tables.next()).thenAnswer(call -> index.incrementAndGet() < names.length);
+        when(tables.getString("TABLE_NAME")).thenAnswer(call -> names[index.get()]);
+        return connection;
+    }
+
     @Test void schemaAndTableNamesAreLiteralMetadataPatterns() throws Exception {
         Connection connection = mock(Connection.class);
         DatabaseMetaData metadata = mock(DatabaseMetaData.class);

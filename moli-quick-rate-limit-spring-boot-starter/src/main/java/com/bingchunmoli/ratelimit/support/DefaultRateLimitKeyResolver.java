@@ -7,8 +7,10 @@ import com.bingchunmoli.ratelimit.exception.RateLimitKeyException;
 import org.springframework.context.expression.MethodBasedEvaluationContext;
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.Expression;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.util.StringUtils;
+import org.springframework.util.ConcurrentLruCache;
 
 import java.lang.reflect.Method;
 import java.util.Objects;
@@ -22,6 +24,10 @@ public class DefaultRateLimitKeyResolver implements RateLimitKeyResolver {
     private static final String GLOBAL_DIMENSION = "global";
 
     private final ExpressionParser expressionParser = new SpelExpressionParser();
+    private final ConcurrentLruCache<String, Expression> expressions =
+            new ConcurrentLruCache<>(256, expressionParser::parseExpression);
+    private final ConcurrentLruCache<Method, String> namespaces =
+            new ConcurrentLruCache<>(256, this::defaultNamespace);
     private final DefaultParameterNameDiscoverer parameterNameDiscoverer = new DefaultParameterNameDiscoverer();
     private final RateLimitProperties properties;
 
@@ -36,7 +42,7 @@ public class DefaultRateLimitKeyResolver implements RateLimitKeyResolver {
                 : GLOBAL_DIMENSION;
         String namespace = StringUtils.hasText(rateLimit.namespace())
                 ? rateLimit.namespace().trim()
-                : defaultNamespace(method);
+                : namespaces.get(method);
         String prefix = requireText(properties.getKeyPrefix(), "moli.rate-limit.key-prefix");
         return prefix + ":" + namespace + ":" + requireText(dimension, "resolved rate limit key");
     }
@@ -56,7 +62,7 @@ public class DefaultRateLimitKeyResolver implements RateLimitKeyResolver {
         try {
             MethodBasedEvaluationContext context = new MethodBasedEvaluationContext(
                     target, method, arguments == null ? new Object[0] : arguments, parameterNameDiscoverer);
-            Object value = expressionParser.parseExpression(expression).getValue(context);
+            Object value = expressions.get(expression).getValue(context);
             return value == null ? null : String.valueOf(value);
         } catch (RuntimeException ex) {
             throw new RateLimitKeyException("Failed to evaluate rate limit SpEL: " + expression, ex);

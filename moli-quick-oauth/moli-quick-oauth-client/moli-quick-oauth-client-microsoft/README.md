@@ -33,6 +33,9 @@ moli:
       microsoft:
         tenant: common
         offline: true
+        jwk-connect-timeout: 5s
+        jwk-read-timeout: 5s
+        jwk-refresh-wait-timeout: 5s
         # prompt: select_account
         # allowed-tenants:
         #   - 11111111-2222-3333-4444-555555555555
@@ -66,10 +69,14 @@ allowed-tenants 可额外限定目录 GUID。个人账号对应目录 9188040d-6
 
 登录使用授权码、S256 PKCE、state 和原生 OIDC nonce/audience/有效期校验。多租户场景额外要求 tid 为 GUID、issuer 与目录一致，并验证 JWKS 中签名密钥的 issuer 范围。密钥仅从配置的 JWK 地址获取，缓存并支持轮换，不根据令牌任意选择网络地址。
 
+公钥下载使用独立 HTTP 工厂，连接、读取和并发刷新等待默认各为 5 秒，可分别通过上述三个 jwk-* 参数调整，均至少为 1ms。等待刷新超时、网络失败或中断会拒绝当前登录；后续请求可重新尝试，不跳过签名或租户校验。
+
+宿主 RestClient.Builder 的请求头、拦截器等仍用于公钥请求；该 Builder 中的 requestFactory 由专用工厂替换。如需代理、自定义 TLS 或其他 HTTP 实现，提供名为 `microsoftJwkSetRequestFactory` 的 `ClientHttpRequestFactory` Bean，并在该工厂上配置有限的连接和读取超时。`jwk-connect-timeout` / `jwk-read-timeout` 只配置默认工厂；`jwk-refresh-wait-timeout` 始终约束并发刷新等待。直接构造适配器时可通过三参数构造方法提供专用工厂。
+
 归一化 provider=microsoft、subject=<issuer>|<sub>。原生 OidcUser 的 name 同样包含 issuer，避免不同目录的相同 sub 共用长期授权记录；原生 ID Token 保留。name/email 可缺失或变化，邮箱只是联系资料，不作为账户绑定或租户权限依据。宿主应按 provider + subject 关联本地账号，并明确处理来宾账号策略。
 
 ## 验证
 
-本地签名 OIDC 测试覆盖个人/组织账号、目录限制、签名密钥 issuer、nonce、audience、过期及错误签名。真实接入还需使用自己的应用凭证完成登录、拒绝授权和刷新冒烟。
+本地签名 OIDC 测试覆盖个人/组织账号、目录限制、签名密钥 issuer、nonce、audience、过期及错误签名，并验证响应头/响应体慢响应超时、并发等待上限、中断和失败后恢复。真实接入还需使用自己的应用凭证完成登录、拒绝授权和刷新冒烟。
 
 官方参考：[OIDC 与账号受众](https://learn.microsoft.com/en-us/entra/identity-platform/v2-protocols-oidc)、[租户及签名密钥 issuer 校验](https://learn.microsoft.com/en-us/entra/identity-platform/access-tokens#validate-the-issuer)。

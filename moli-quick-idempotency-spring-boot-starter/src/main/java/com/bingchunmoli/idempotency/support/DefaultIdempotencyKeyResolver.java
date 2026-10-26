@@ -9,8 +9,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.expression.MethodBasedEvaluationContext;
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.Expression;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.util.StringUtils;
+import org.springframework.util.ConcurrentLruCache;
 
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -26,6 +28,10 @@ import java.util.Objects;
 public class DefaultIdempotencyKeyResolver implements IdempotencyKeyResolver {
 
     private final ExpressionParser expressionParser = new SpelExpressionParser();
+    private final ConcurrentLruCache<String, Expression> expressions =
+            new ConcurrentLruCache<>(256, expressionParser::parseExpression);
+    private final ConcurrentLruCache<Method, String> namespaces =
+            new ConcurrentLruCache<>(256, this::defaultNamespace);
     private final DefaultParameterNameDiscoverer parameterNameDiscoverer = new DefaultParameterNameDiscoverer();
     private final ObjectMapper objectMapper;
     private final IdempotencyProperties properties;
@@ -42,7 +48,7 @@ public class DefaultIdempotencyKeyResolver implements IdempotencyKeyResolver {
                 : digestArguments(method, arguments);
         String namespace = StringUtils.hasText(idempotent.namespace())
                 ? idempotent.namespace().trim()
-                : defaultNamespace(method);
+                : namespaces.get(method);
         String prefix = requireText(properties.getKeyPrefix(), "moli.idempotency.key-prefix");
         return prefix + ":" + namespace + ":" + requireText(businessKey, "resolved idempotency key");
     }
@@ -62,7 +68,7 @@ public class DefaultIdempotencyKeyResolver implements IdempotencyKeyResolver {
         try {
             MethodBasedEvaluationContext context = new MethodBasedEvaluationContext(
                     target, method, arguments == null ? new Object[0] : arguments, parameterNameDiscoverer);
-            Object value = expressionParser.parseExpression(expression).getValue(context);
+            Object value = expressions.get(expression).getValue(context);
             return value == null ? null : String.valueOf(value);
         } catch (RuntimeException ex) {
             throw new IdempotencyKeyException("Failed to evaluate idempotency SpEL: " + expression, ex);

@@ -23,6 +23,33 @@ class JwtTokenServiceTest {
     }
 
     @Test
+    void concurrentValidationKeepsTokenClaimsAndFailuresIndependent() {
+        var tokens = tokenService(JwtMode.STATELESS, sessionStore);
+        var first = tokens.createToken(new JwtUser("first", "first", List.of("ROLE_FIRST"), Map.of())).getToken();
+        var second = tokens.createToken(new JwtUser("second", "second", List.of("ROLE_SECOND"), Map.of())).getToken();
+        java.util.stream.IntStream.range(0, 100).parallel().forEach(index -> {
+            String name = index % 2 == 0 ? "first" : "second";
+            assertThat(tokens.authenticate(index % 2 == 0 ? first : second).getName()).isEqualTo(name);
+            assertThatThrownBy(() -> tokens.parseClaims("invalid.jwt.token")).isInstanceOf(JwtTokenException.class);
+        });
+    }
+
+    @Test
+    void changingIssuerStillRejectsOldTokensAndAcceptsNewTokens() {
+        var properties = new JwtTokenProperties();
+        properties.setMode(JwtMode.STATELESS);
+        properties.setSecret("moli-quick-security-test-secret-key-123456");
+        var tokens = new JwtTokenService(properties, sessionStore);
+        var original = tokens.createToken(user()).getToken();
+        assertThat(tokens.authenticate(original).getName()).isEqualTo("moli");
+        properties.setIssuer("changed-issuer");
+        assertThatThrownBy(() -> tokens.authenticate(original)).isInstanceOf(JwtTokenException.class);
+        assertThat(tokens.authenticate(tokens.createToken(user()).getToken()).getName()).isEqualTo("moli");
+        properties.setIssuer("moli-quick");
+        assertThat(tokens.authenticate(original).getName()).isEqualTo("moli");
+    }
+
+    @Test
     void shouldAuthenticateSimpleModeWithServerSideSession() {
         JwtTokenService tokenService = tokenService(JwtMode.SIMPLE, sessionStore);
 

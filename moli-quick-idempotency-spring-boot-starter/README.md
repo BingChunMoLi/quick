@@ -31,7 +31,9 @@ public Order createOrder(CreateOrderRequest request) {
 
 同一个幂等 Key 在有效期内再次调用会抛出 `DuplicateRequestException`。调用成功后 Key
 保留到 TTL 到期；调用抛出异常时默认释放 Key，允许业务重试。`CompletionStage`
-异步失败同样会释放 Key。
+异步失败（含取消）同样会释放 Key，切面保留业务返回的原始 Future。异步释放在完成回调中执行；并发观察者可能先于释放回调看到完成状态。
+
+Redis 存储的最小 TTL 为 1 毫秒；小于 1 毫秒的正数超时按 1 毫秒处理。
 
 若存储在释放 Key 时发生运行时异常，原业务异常仍会传播，释放异常记录在其 `suppressed` 异常中；存储未成功释放的 Key 仍需等待 TTL 到期。
 

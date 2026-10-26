@@ -99,8 +99,12 @@ class RedisJwtSessionStoreTest {
     private void assertRefreshCannotUndoLogout(boolean byUser) {
         Map<String, Object> values = new ConcurrentHashMap<>();
         RedisTemplate<String, Object> template = redisTemplate(values, new ConcurrentHashMap<>());
-        RedisJwtSessionStore store = new RedisJwtSessionStore(template, properties());
-        store.save(session());
+        RedisJwtSessionStore store = new RedisJwtSessionStore(template, properties(), CLOCK);
+        JwtSession session = session();
+        session.setCreatedAt(NOW.minusSeconds(1));
+        session.setLastAccessAt(NOW.minusSeconds(1));
+        session.setExpiresAt(NOW.plusSeconds(300));
+        store.save(session);
         AtomicBoolean logoutPending = new AtomicBoolean(true);
         // The refresh has already read its own independent, non-revoked Redis snapshot.
         backends.get(template).beforeCompareAndSet = () -> {
@@ -113,14 +117,14 @@ class RedisJwtSessionStoreTest {
             }
         };
 
-        store.refresh("session-1", Instant.now(), Instant.now().plusSeconds(120));
+        store.refresh("session-1", NOW, NOW.plusSeconds(120));
 
         assertThat(logoutPending).isFalse();
 
         assertThat(store.findBySessionId("session-1")).get().extracting(JwtSession::isExpired).isEqualTo(true);
         assertThat(store.findByTokenId("token-1")).get().extracting(JwtSession::isExpired).isEqualTo(true);
         assertThat(store.findByUserId("1001")).singleElement().extracting(JwtSession::isExpired).isEqualTo(true);
-        store.refresh("session-1", Instant.now(), Instant.now().plusSeconds(180));
+        store.refresh("session-1", NOW.plusSeconds(1), NOW.plusSeconds(180));
         assertThat(store.findBySessionId("session-1")).get().extracting(JwtSession::isExpired).isEqualTo(true);
     }
 

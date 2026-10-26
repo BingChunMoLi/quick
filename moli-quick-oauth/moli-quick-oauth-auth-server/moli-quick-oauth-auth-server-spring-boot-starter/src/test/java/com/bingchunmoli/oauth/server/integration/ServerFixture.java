@@ -48,7 +48,10 @@ final class ServerFixture implements AutoCloseable {
     ConfigurableApplicationContext auth,resource,opaque,client;
     static int port() {try(var socket=new java.net.ServerSocket(0,0,InetAddress.getByName("127.0.0.1"))){return socket.getLocalPort();}catch(Exception e){throw new IllegalStateException(e);}}
     ServerFixture(String store,String jdbcUrl,String jdbcUser,String jdbcPassword,int redisPort) {
-        authBase="http://127.0.0.1:"+port();resourceBase="http://127.0.0.1:"+port();
+        this(store,jdbcUrl,jdbcUser,jdbcPassword,redisPort,Map.of());
+    }
+    ServerFixture(String store,String jdbcUrl,String jdbcUser,String jdbcPassword,int redisPort,Map<String,String> overrides) {
+        authBase="http://127.0.0.1:"+port()+overrides.getOrDefault("server.servlet.context-path","");resourceBase="http://127.0.0.1:"+port();
         opaqueBase="http://127.0.0.1:"+port();clientBase="http://127.0.0.1:"+port();prefix="test:quick:authorization:"+UUID.randomUUID();
         authProperties.put("server.port",URI.create(authBase).getPort()+"");
         authProperties.put("server.servlet.session.cookie.name","AUTH_SESSION");
@@ -71,6 +74,7 @@ final class ServerFixture implements AutoCloseable {
             authProperties.put("moli.oauth.auth-server.audiences."+clientId(id),"quick-api");
         }
         authProperties.put("spring.security.oauth2.authorizationserver.client.reference.token.access-token-format","reference");
+        authProperties.putAll(overrides);
         try {
             restartAuthorization();
             resource=boot(ResourceHost.class,Map.of("server.port",URI.create(resourceBase).getPort()+"","moli.oauth.resource-server.enabled","true",
@@ -86,7 +90,8 @@ final class ServerFixture implements AutoCloseable {
                     Map.entry("spring.security.oauth2.client.registration.local.client-secret",SECRET),
                     Map.entry("spring.security.oauth2.client.registration.local.authorization-grant-type","authorization_code"),
                     Map.entry("spring.security.oauth2.client.registration.local.scope","openid,profile,api.read"),
-                    Map.entry("spring.security.oauth2.client.provider.local-server.issuer-uri",authBase),Map.entry("test.resource",resourceBase)));
+                    Map.entry("spring.security.oauth2.client.provider.local-server.issuer-uri",authBase),Map.entry("test.resource",
+                            "reference".equals(authProperties.get("spring.security.oauth2.authorizationserver.client.browser.token.access-token-format"))?opaqueBase:resourceBase)));
         } catch(Throwable failure) {close();throw failure;}
     }
     void restartAuthorization() {if(auth!=null)auth.close();auth=boot(AuthHost.class,authProperties);}

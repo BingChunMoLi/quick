@@ -2,7 +2,9 @@ package com.bingchunmoli.security.jwt;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.util.ConcurrentLruCache;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -34,6 +36,7 @@ public class JwtTokenService {
     private final JwtSessionStore sessionStore;
 
     private final SecretKey secretKey;
+    private final ConcurrentLruCache<String, JwtParser> parsers;
 
     public JwtTokenService(JwtTokenProperties properties, JwtSessionStore sessionStore) {
         this.properties = properties;
@@ -45,6 +48,9 @@ public class JwtTokenService {
                     "Configure moli.security.jwt.secret with a random secret of at least 32 UTF-8 bytes; the legacy default is not allowed");
         }
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        // Parsers are immutable; keep the issuer dimension so existing property changes still take effect.
+        this.parsers = new ConcurrentLruCache<>(4, issuer -> Jwts.parser()
+                .verifyWith(secretKey).requireIssuer(issuer).build());
     }
 
     public JwtToken createToken(JwtUser user) {
@@ -101,10 +107,7 @@ public class JwtTokenService {
 
     public Claims parseClaims(String token) {
         try {
-            Claims claims = Jwts.parser()
-                    .verifyWith(secretKey)
-                    .requireIssuer(properties.getIssuer())
-                    .build()
+            Claims claims = parsers.get(properties.getIssuer())
                     .parseSignedClaims(token)
                     .getPayload();
             validateClaims(claims);

@@ -41,6 +41,30 @@ class IdempotencyAutoConfigurationTest {
                     IdempotencyAutoConfiguration.class));
 
     @Test
+    void preservesConcreteFutureReturnType() {
+        contextRunner.withUserConfiguration(TestConfiguration.class).run(context -> {
+            var service = context.getBean(TestService.class);
+            var future = new CustomFuture<String>();
+            assertThat(service.customFuture("custom", future)).isSameAs(future);
+            future.complete("ok");
+            assertThat(future.join()).isEqualTo("ok");
+        });
+    }
+
+    @Test
+    void cancellingReturnedFutureCancelsBusinessFutureAndReleasesKey() {
+        contextRunner.withUserConfiguration(TestConfiguration.class).run(context -> {
+            var service = context.getBean(TestService.class);
+            var original = new CompletableFuture<String>();
+            var returned = service.pendingFuture("cancel", original);
+            assertThat(returned.cancel(false)).isTrue();
+            assertThat(original.isCancelled()).isTrue();
+            var retry = new CompletableFuture<String>();
+            assertThat(service.pendingFuture("cancel", retry)).isSameAs(retry);
+        });
+    }
+
+    @Test
     void overloadedDefaultNamespacesAreIndependent() {
         contextRunner.withUserConfiguration(TestConfiguration.class).run(context -> {
             var service = context.getBean(TestService.class);
@@ -209,6 +233,12 @@ class IdempotencyAutoConfigurationTest {
         private final AtomicInteger asyncAttempts = new AtomicInteger();
 
         @Idempotent(key = "#p0")
+        public CustomFuture<String> customFuture(String key, CustomFuture<String> future) { return future; }
+
+        @Idempotent(key = "#p0")
+        public CompletableFuture<String> pendingFuture(String key, CompletableFuture<String> future) { return future; }
+
+        @Idempotent(key = "#p0")
         public String overloaded(String value) { return "string"; }
 
         @Idempotent(key = "#p0")
@@ -249,4 +279,6 @@ class IdempotencyAutoConfigurationTest {
             return CompletableFuture.completedFuture("ok");
         }
     }
+
+    static class CustomFuture<T> extends CompletableFuture<T> { }
 }

@@ -3,6 +3,7 @@ package com.bingchunmoli.oauth.client.microsoft;
 import com.bingchunmoli.oauth.client.OAuth2Identity;
 import com.bingchunmoli.oauth.client.oidc.OidcProviderAdapter;
 import java.util.*;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
@@ -23,7 +24,12 @@ public final class MicrosoftOAuth2ProviderAdapter implements OidcProviderAdapter
     private final MicrosoftOAuth2Properties properties;
     private final RestClient http;
     public MicrosoftOAuth2ProviderAdapter(MicrosoftOAuth2Properties properties, RestClient.Builder builder) {
-        this.properties = properties; this.http = builder.clone().build();
+        this(properties, builder, MicrosoftJwkHttp.requestFactory(properties));
+    }
+    public MicrosoftOAuth2ProviderAdapter(MicrosoftOAuth2Properties properties, RestClient.Builder builder,
+            ClientHttpRequestFactory jwkRequestFactory) {
+        properties.validateTimeouts();
+        this.properties = properties; this.http = builder.clone().requestFactory(jwkRequestFactory).build();
         String tenant = properties.getTenant();
         if (!Set.of("common", "organizations", "consumers").contains(tenant) && !guid(tenant))
             throw new IllegalArgumentException("Microsoft tenant must be common, organizations, consumers or a directory GUID");

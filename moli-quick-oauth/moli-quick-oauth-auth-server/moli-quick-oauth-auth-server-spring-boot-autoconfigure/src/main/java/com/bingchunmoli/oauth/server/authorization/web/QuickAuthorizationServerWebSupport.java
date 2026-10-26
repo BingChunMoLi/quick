@@ -1,6 +1,7 @@
 package com.bingchunmoli.oauth.server.authorization.web;
 import com.bingchunmoli.oauth.server.authorization.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -9,6 +10,9 @@ import org.springframework.security.oauth2.server.authorization.*;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationProvider;
+import org.springframework.security.oauth2.server.resource.authentication.OpaqueTokenAuthenticationProvider;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 public final class QuickAuthorizationServerWebSupport {
     private final RegisteredClientRepository clients;
@@ -34,7 +38,11 @@ public final class QuickAuthorizationServerWebSupport {
         @Override public void init(HttpSecurity http) {
             applied.set(true);
             http.setSharedObject(org.springframework.security.oauth2.jwt.JwtDecoder.class,decoder);
-            http.oauth2ResourceServer(resource -> resource.jwt(jwt -> jwt.decoder(decoder)));
+            var jwt=new ProviderManager(new JwtAuthenticationProvider(decoder));
+            var userInfo=new ProviderManager(new OpaqueTokenAuthenticationProvider(new AuthorizationServiceTokenIntrospector(authorizations)));
+            var userInfoEndpoint=PathPatternRequestMatcher.withDefaults().matcher(settings.getOidcUserInfoEndpoint());
+            // Only UserInfo uses local token state; other protocol endpoints retain JWT bearer validation.
+            http.oauth2ResourceServer(resource -> resource.authenticationManagerResolver(request -> userInfoEndpoint.matches(request)?userInfo:jwt));
             http.with(nativeConfigurer, server -> server.registeredClientRepository(clients).authorizationService(authorizations).authorizationConsentService(consents)
                 .authorizationServerSettings(settings).tokenGenerator(generator).oidc(Customizer.withDefaults())
                 .authorizationEndpoint(endpoint -> endpoint.authenticationProviders(providers -> providers.replaceAll(

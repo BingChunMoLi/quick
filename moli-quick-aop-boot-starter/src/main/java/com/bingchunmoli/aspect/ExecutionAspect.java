@@ -6,6 +6,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.util.StopWatch;
+import org.springframework.core.annotation.AnnotationUtils;
 
 /**
  * @author MoLi
@@ -19,7 +20,7 @@ public class ExecutionAspect {
             return pjp.proceed(pjp.getArgs());
         }
         StopWatch stopWatch = new StopWatch();
-        stopWatch.start(executionTime.value());
+        stopWatch.start(AnnotationUtils.synthesizeAnnotation(executionTime, null).value());
         try {
             return pjp.proceed(pjp.getArgs());
         }finally {
